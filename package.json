@@ -1,0 +1,25 @@
+{
+  "name": "ekho-engine-workshop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nbassart/Ekho-Engine-Workshop.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nbassart/Ekho-Engine-Workshop/issues"
+  },
+  "homepage": "https://github.com/nbassart/Ekho-Engine-Workshop#readme",
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "vite": "^8.2.2"
+  }
+}
