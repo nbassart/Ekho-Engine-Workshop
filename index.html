@@ -26,6 +26,16 @@
         }
 
         video {
+            display: block;
+            width: 640px;
+            max-width: 90vw;
+            transform: scaleX(-1);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 640px;
             max-width: 90vw;
             transform: scaleX(-1);
@@ -43,11 +53,19 @@
     <h1>Ekho Workshop</h1>
 
     <div id="video-container">
-        <video id="video" autoplay playsinline></video>
+
+        <video
+            id="video"
+            autoplay
+            playsinline>
+        </video>
+
+        <canvas id="canvas"></canvas>
+
     </div>
 
     <div id="status">
-        Preparant la càmera...
+        Carregant...
     </div>
 
     <script type="module" src="app.js"></script>
