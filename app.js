@@ -71,6 +71,31 @@ let soundEnabled = false;
 
 
 // ================================================
+// 🖐️ MODE DE CONFIGURACIÓ DE CADA MÀ
+// ================================================
+//
+// Per defecte, primer configurem la mà sencera.
+// Els dits només s'activen quan l'alumne prem
+// "Personalitza els dits".
+//
+
+const handModes = {
+    left: "hand",
+    right: "hand"
+};
+
+const selectedHandState = {
+    left: "open",
+    right: "open"
+};
+
+const activeHandStates = {
+    left: null,
+    right: null
+};
+
+
+// ================================================
 // 🎵 NOTES
 // ================================================
 
@@ -251,7 +276,6 @@ function getScaleNotes() {
 
 function getAvailableNotes() {
 
-    // 🎨 LLIURE
     if (
         selectedScale === "Lliure"
     ) {
@@ -278,8 +302,6 @@ function getAvailableNotes() {
         return notes;
     }
 
-
-    // 🎼 TONALITAT
     const notes =
         getScaleNotes();
 
@@ -362,8 +384,6 @@ function getAvailableChords() {
 
     const chords = [];
 
-    // Evitem duplicar la mateixa nota
-    // en diferents octaves.
     const roots = [];
 
     for (
@@ -390,6 +410,7 @@ function getAvailableChords() {
                     pitchClass
             )
         ) {
+
             roots.push({
                 note,
                 pitchClass
@@ -597,19 +618,8 @@ function drawHands(results) {
 
 
 // ================================================
-// CONFIGURACIÓ D'UN DIT
+// CONFIGURACIÓ D'UN DIT / D'UNA MÀ
 // ================================================
-
-function getFingerConfig(
-    hand,
-    finger
-) {
-
-    return hand === "left"
-        ? instrumentConfig.leftHand[finger]
-        : instrumentConfig.rightHand[finger];
-}
-
 
 function getHandConfig(hand) {
 
@@ -619,12 +629,74 @@ function getHandConfig(hand) {
 }
 
 
+function ensureHandConfig(hand) {
+
+    const config =
+        getHandConfig(hand);
+
+    if (!config.hand) {
+
+        config.hand = {
+            open: "none",
+            closed: "none"
+        };
+    }
+
+    if (!config.fingers) {
+
+        config.fingers = {
+            thumb: "none",
+            index: "none",
+            middle: "none",
+            ring: "none",
+            pinky: "none"
+        };
+    }
+
+    return config;
+}
+
+
+function getFingerConfig(
+    hand,
+    finger
+) {
+
+    const config =
+        ensureHandConfig(hand);
+
+    return config.fingers[finger];
+}
+
+
 function getVoiceId(
     hand,
     finger
 ) {
 
     return `${hand}-${finger}`;
+}
+
+
+function getWholeHandVoiceId(
+    hand,
+    state
+) {
+
+    return `${hand}-whole-${state}`;
+}
+
+
+for (
+    const hand
+    of ["left", "right"]
+) {
+
+    const config =
+        ensureHandConfig(hand);
+
+    config.mode =
+        "hand";
 }
 
 
@@ -802,6 +874,106 @@ function stopHandVoices(hand) {
         activeNotes[hand][finger] =
             false;
     }
+
+    for (
+        const state
+        of ["open", "closed"]
+    ) {
+
+        const voiceId =
+            getWholeHandVoiceId(
+                hand,
+                state
+            );
+
+        stopNote(voiceId);
+        stopChord(voiceId);
+        removeDrumTrack(voiceId);
+    }
+
+    activeHandStates[hand] =
+        null;
+}
+
+
+// ================================================
+// 🖐️ EXECUTAR ACCIÓ DE LA MÀ SENCERA
+// ================================================
+
+function executeWholeHandAction(
+    hand,
+    state,
+    config
+) {
+
+    if (
+        !soundEnabled ||
+        !config ||
+        config === "none"
+    ) {
+        return;
+    }
+
+    const voiceId =
+        getWholeHandVoiceId(
+            hand,
+            state
+        );
+
+    if (
+        config.action === "note"
+    ) {
+
+        const frequency =
+            noteToFrequency(
+                config.value
+            );
+
+        if (
+            frequency !== null
+        ) {
+
+            playNote(
+                voiceId,
+                frequency
+            );
+        }
+
+        return;
+    }
+
+    if (
+        config.action === "chord"
+    ) {
+
+        const frequencies =
+            createChordFrequencies(
+                config.value,
+                config.chordType
+            );
+
+        if (
+            frequencies.length > 0
+        ) {
+
+            playChord(
+                voiceId,
+                frequencies
+            );
+        }
+
+        return;
+    }
+
+    if (
+        config.action === "drum"
+    ) {
+
+        addDrumTrack(
+            voiceId,
+            config.value || "kick"
+        );
+    }
 }
 
 
@@ -823,6 +995,11 @@ function processHand(
         return;
     }
 
+    const config =
+        ensureHandConfig(
+            handName
+        );
+
     const fingers =
         hand.fingers || hand;
 
@@ -833,6 +1010,145 @@ function processHand(
         "ring",
         "pinky"
     ];
+
+
+    // ==========================================
+    // 🖐️ MÀ SENCERA
+    // ==========================================
+
+    if (
+        handModes[handName] ===
+        "hand"
+    ) {
+
+        const isOpen =
+            fingerNames.every(
+                finger =>
+                    Boolean(
+                        fingers[finger]
+                    )
+            );
+
+        const isClosed =
+            fingerNames.every(
+                finger =>
+                    !Boolean(
+                        fingers[finger]
+                    )
+            );
+
+        let state =
+            null;
+
+        if (isOpen) {
+
+            state =
+                "open";
+
+        }
+        else if (isClosed) {
+
+            state =
+                "closed";
+        }
+
+        if (!state) {
+
+            if (
+                activeHandStates[
+                    handName
+                ]
+            ) {
+
+                const previousState =
+                    activeHandStates[
+                        handName
+                    ];
+
+                const voiceId =
+                    getWholeHandVoiceId(
+                        handName,
+                        previousState
+                    );
+
+                stopNote(
+                    voiceId
+                );
+
+                stopChord(
+                    voiceId
+                );
+
+                removeDrumTrack(
+                    voiceId
+                );
+
+                activeHandStates[
+                    handName
+                ] =
+                    null;
+            }
+
+            return;
+        }
+
+        if (
+            activeHandStates[
+                handName
+            ] === state
+        ) {
+
+            return;
+        }
+
+        if (
+            activeHandStates[
+                handName
+            ]
+        ) {
+
+            const previousState =
+                activeHandStates[
+                    handName
+                ];
+
+            const previousVoiceId =
+                getWholeHandVoiceId(
+                    handName,
+                    previousState
+                );
+
+            stopNote(
+                previousVoiceId
+            );
+
+            stopChord(
+                previousVoiceId
+            );
+
+            removeDrumTrack(
+                previousVoiceId
+            );
+        }
+
+        executeWholeHandAction(
+            handName,
+            state,
+            config.hand[state]
+        );
+
+        activeHandStates[
+            handName
+        ] =
+            state;
+
+        return;
+    }
+
+
+    // ==========================================
+    // 👆 DITS PERSONALITZATS
+    // ==========================================
 
     for (
         const finger
@@ -848,7 +1164,6 @@ function processHand(
             activeNotes[
                 handName
             ][finger];
-
 
         if (
             isActive !==
@@ -893,22 +1208,9 @@ function globalMuteIfNoHands(
             of ["left", "right"]
         ) {
 
-            for (
-                const finger
-                of [
-                    "thumb",
-                    "index",
-                    "middle",
-                    "ring",
-                    "pinky"
-                ]
-            ) {
-
-                activeNotes[
-                    hand
-                ][finger] =
-                    false;
-            }
+            stopHandVoices(
+                hand
+            );
         }
     }
 }
@@ -1038,6 +1340,8 @@ function createNoteSelector(
         select
     );
 }
+
+
 // ================================================
 // 🎹 CREAR SELECTOR D'ACORDS
 // ================================================
@@ -1132,7 +1436,8 @@ function createChordSelector(
     }
 
 
-    let selectedIndex = -1;
+    let selectedIndex =
+        -1;
 
 
     if (
@@ -1188,157 +1493,6 @@ function createChordSelector(
     valueArea.appendChild(
         select
     );
-}
-
-
-// ================================================
-// 🎵 CANVIAR NOTA
-// ================================================
-
-function changeNote(value) {
-
-    if (
-        !selectedHand ||
-        !selectedFinger
-    ) {
-        return;
-    }
-
-    const config =
-        getFingerConfig(
-            selectedHand,
-            selectedFinger
-        );
-
-    if (
-        !config ||
-        config === "none"
-    ) {
-        return;
-    }
-
-    config.action =
-        "note";
-
-    config.value =
-        value;
-
-
-    const voiceId =
-        getVoiceId(
-            selectedHand,
-            selectedFinger
-        );
-
-
-    if (
-        activeNotes[
-            selectedHand
-        ][selectedFinger] &&
-        soundEnabled
-    ) {
-
-        stopNote(
-            voiceId
-        );
-
-        const frequency =
-            noteToFrequency(
-                value
-            );
-
-        if (
-            frequency !== null
-        ) {
-
-            playNote(
-                voiceId,
-                frequency
-            );
-        }
-    }
-
-
-    updateCodePreview();
-}
-
-
-// ================================================
-// 🎹 CANVIAR ACORD
-// ================================================
-
-function changeChord(
-    root,
-    type
-) {
-
-    if (
-        !selectedHand ||
-        !selectedFinger
-    ) {
-        return;
-    }
-
-    const config =
-        getFingerConfig(
-            selectedHand,
-            selectedFinger
-        );
-
-    if (
-        !config ||
-        config === "none"
-    ) {
-        return;
-    }
-
-    config.action =
-        "chord";
-
-    config.value =
-        root;
-
-    config.chordType =
-        type;
-
-
-    const voiceId =
-        getVoiceId(
-            selectedHand,
-            selectedFinger
-        );
-
-
-    if (
-        activeNotes[
-            selectedHand
-        ][selectedFinger] &&
-        soundEnabled
-    ) {
-
-        stopChord(
-            voiceId
-        );
-
-        const frequencies =
-            createChordFrequencies(
-                root,
-                type
-            );
-
-        if (
-            frequencies.length > 0
-        ) {
-
-            playChord(
-                voiceId,
-                frequencies
-            );
-        }
-    }
-
-
-    updateCodePreview();
 }
 
 
@@ -1463,6 +1617,150 @@ function createDrumSelector(
         select
     );
 }
+// ================================================
+// 🎵 CANVIAR NOTA
+// ================================================
+
+function changeNote(value) {
+
+    if (
+        !selectedHand
+    ) {
+        return;
+    }
+
+
+    let config;
+
+
+    if (
+        handModes[selectedHand] ===
+        "hand"
+    ) {
+
+        const handConfig =
+            ensureHandConfig(
+                selectedHand
+            );
+
+        const state =
+            selectedHandState[
+                selectedHand
+            ];
+
+        config =
+            handConfig.hand[state];
+
+    }
+    else {
+
+        if (
+            !selectedFinger
+        ) {
+            return;
+        }
+
+        config =
+            getFingerConfig(
+                selectedHand,
+                selectedFinger
+            );
+    }
+
+
+    if (
+        !config ||
+        config === "none"
+    ) {
+        return;
+    }
+
+
+    config.action =
+        "note";
+
+    config.value =
+        value;
+
+
+    updateCodePreview();
+}
+
+
+// ================================================
+// 🎹 CANVIAR ACORD
+// ================================================
+
+function changeChord(
+    root,
+    type
+) {
+
+    if (
+        !selectedHand
+    ) {
+        return;
+    }
+
+
+    let config;
+
+
+    if (
+        handModes[selectedHand] ===
+        "hand"
+    ) {
+
+        const handConfig =
+            ensureHandConfig(
+                selectedHand
+            );
+
+        const state =
+            selectedHandState[
+                selectedHand
+            ];
+
+        config =
+            handConfig.hand[state];
+
+    }
+    else {
+
+        if (
+            !selectedFinger
+        ) {
+            return;
+        }
+
+        config =
+            getFingerConfig(
+                selectedHand,
+                selectedFinger
+            );
+    }
+
+
+    if (
+        !config ||
+        config === "none"
+    ) {
+        return;
+    }
+
+
+    config.action =
+        "chord";
+
+    config.value =
+        root;
+
+    config.chordType =
+        type;
+
+
+    updateCodePreview();
+}
 
 
 // ================================================
@@ -1472,17 +1770,49 @@ function createDrumSelector(
 function changeDrum(value) {
 
     if (
-        !selectedHand ||
-        !selectedFinger
+        !selectedHand
     ) {
         return;
     }
 
-    const config =
-        getFingerConfig(
-            selectedHand,
-            selectedFinger
-        );
+
+    let config;
+
+
+    if (
+        handModes[selectedHand] ===
+        "hand"
+    ) {
+
+        const handConfig =
+            ensureHandConfig(
+                selectedHand
+            );
+
+        const state =
+            selectedHandState[
+                selectedHand
+            ];
+
+        config =
+            handConfig.hand[state];
+
+    }
+    else {
+
+        if (
+            !selectedFinger
+        ) {
+            return;
+        }
+
+        config =
+            getFingerConfig(
+                selectedHand,
+                selectedFinger
+            );
+    }
+
 
     if (
         !config ||
@@ -1491,36 +1821,12 @@ function changeDrum(value) {
         return;
     }
 
+
     config.action =
         "drum";
 
     config.value =
         value;
-
-
-    const voiceId =
-        getVoiceId(
-            selectedHand,
-            selectedFinger
-        );
-
-
-    if (
-        activeNotes[
-            selectedHand
-        ][selectedFinger] &&
-        soundEnabled
-    ) {
-
-        removeDrumTrack(
-            voiceId
-        );
-
-        addDrumTrack(
-            voiceId,
-            value
-        );
-    }
 
 
     updateCodePreview();
@@ -1535,6 +1841,17 @@ function selectFinger(
     hand,
     finger
 ) {
+
+    // Els dits només estan disponibles
+    // en mode "fingers".
+
+    if (
+        handModes[hand] !==
+        "fingers"
+    ) {
+        return;
+    }
+
 
     selectedHand =
         hand;
@@ -1555,6 +1872,7 @@ function selectFinger(
 
                     button.dataset.hand ===
                         hand &&
+
                     button.dataset.finger ===
                         finger
                 );
@@ -1580,6 +1898,86 @@ function selectFinger(
 
 
 // ================================================
+// 🖐️ SELECCIONAR ESTAT DE LA MÀ
+// ================================================
+
+function selectHandState(
+    hand,
+    state
+) {
+
+    if (
+        handModes[hand] !==
+        "hand"
+    ) {
+        return;
+    }
+
+
+    selectedHand =
+        hand;
+
+    selectedFinger =
+        null;
+
+
+    selectedHandState[hand] =
+        state;
+
+
+    document
+        .querySelectorAll(
+            `.hand-mode-button[data-hand="${hand}"][data-state]`
+        )
+        .forEach(
+            button => {
+
+                button.classList.toggle(
+                    "selected",
+
+                    button.dataset.state ===
+                        state
+                );
+            }
+        );
+
+
+    document
+        .querySelectorAll(
+            `.finger-button[data-hand="${hand}"]`
+        )
+        .forEach(
+            button => {
+
+                button.classList.remove(
+                    "selected"
+                );
+            }
+        );
+
+
+    const selected =
+        document.getElementById(
+            "selected-finger"
+        );
+
+
+    if (selected) {
+
+        selected.textContent =
+            `${hand === "left" ? "👈" : "👉"} ${
+                state === "open"
+                    ? "🖐️ Mà oberta"
+                    : "✊ Mà tancada"
+            }`;
+    }
+
+
+    loadCurrentHandConfiguration();
+}
+
+
+// ================================================
 // 📂 CARREGAR CONFIGURACIÓ DEL DIT
 // ================================================
 
@@ -1600,11 +1998,50 @@ function loadCurrentConfiguration() {
         );
 
 
-    const valueArea =
-        document.getElementById(
-            "value-area"
+    renderConfiguration(
+        config
+    );
+}
+
+
+// ================================================
+// 📂 CARREGAR CONFIGURACIÓ DE LA MÀ
+// ================================================
+
+function loadCurrentHandConfiguration() {
+
+    if (
+        !selectedHand
+    ) {
+        return;
+    }
+
+
+    const config =
+        ensureHandConfig(
+            selectedHand
         );
 
+
+    const state =
+        selectedHandState[
+            selectedHand
+        ];
+
+
+    renderConfiguration(
+        config.hand[state]
+    );
+}
+
+
+// ================================================
+// 🎛️ RENDERITZAR CONFIGURACIÓ
+// ================================================
+
+function renderConfiguration(
+    config
+) {
 
     document
         .querySelectorAll(
@@ -1620,6 +2057,12 @@ function loadCurrentConfiguration() {
         );
 
 
+    const valueArea =
+        document.getElementById(
+            "value-area"
+        );
+
+
     if (
         !config ||
         config === "none"
@@ -1627,6 +2070,7 @@ function loadCurrentConfiguration() {
 
         selectedAction =
             null;
+
 
         if (valueArea) {
 
@@ -1637,6 +2081,7 @@ function loadCurrentConfiguration() {
             valueArea.innerHTML =
                 "";
         }
+
 
         updateCodePreview();
 
@@ -1668,7 +2113,8 @@ function loadCurrentConfiguration() {
 
 
     if (
-        selectedAction === "note"
+        selectedAction ===
+        "note"
     ) {
 
         createNoteSelector(
@@ -1677,17 +2123,19 @@ function loadCurrentConfiguration() {
     }
 
     else if (
-        selectedAction === "chord"
+        selectedAction ===
+        "chord"
     ) {
 
         createChordSelector(
             config.value,
-            config.chordType || "major"
+            config.chordType
         );
     }
 
     else if (
-        selectedAction === "drum"
+        selectedAction ===
+        "drum"
     ) {
 
         createDrumSelector(
@@ -1711,115 +2159,19 @@ function loadCurrentConfiguration() {
 
 
 // ================================================
-// 🎛️ ESCOLLIR ACCIÓ
+// 🎛️ PREPARAR CONFIGURACIÓ D'ACCIÓ
 // ================================================
 
-function chooseAction(
+function prepareActionConfig(
+    config,
     actionId
 ) {
 
     if (
-        !selectedHand ||
-        !selectedFinger
-    ) {
-        return;
-    }
-
-
-    const handConfig =
-        getHandConfig(
-            selectedHand
-        );
-
-
-    // ==========================================
-    // ⚪ NO FA RES
-    // ==========================================
-
-    if (
-        actionId === "none"
-    ) {
-
-        stopHandVoices(
-            selectedHand
-        );
-
-        handConfig[
-            selectedFinger
-        ] =
-            "none";
-
-        selectedAction =
-            null;
-
-
-        document
-            .querySelectorAll(
-                ".action-button"
-            )
-            .forEach(
-                button => {
-
-                    button.classList.remove(
-                        "selected"
-                    );
-                }
-            );
-
-
-        const valueArea =
-            document.getElementById(
-                "value-area"
-            );
-
-
-        if (valueArea) {
-
-            valueArea.classList.add(
-                "hidden"
-            );
-
-            valueArea.innerHTML =
-                "";
-        }
-
-
-        updateCodePreview();
-
-        return;
-    }
-
-
-    selectedAction =
-        actionId;
-
-
-    let config =
-        handConfig[
-            selectedFinger
-        ];
-
-
-    if (
         !config ||
-        config === "none" ||
-        typeof config !== "object"
+        config === "none"
     ) {
-
-        config = {
-            action: actionId
-        };
-
-        handConfig[
-            selectedFinger
-        ] =
-            config;
-
-    }
-    else {
-
-        config.action =
-            actionId;
+        return;
     }
 
 
@@ -1828,11 +2180,13 @@ function chooseAction(
     // ==========================================
 
     if (
-        actionId === "note"
+        actionId ===
+        "note"
     ) {
 
         const notes =
             getAvailableNotes();
+
 
         if (
             !config.value ||
@@ -1842,8 +2196,10 @@ function chooseAction(
         ) {
 
             config.value =
-                notes[0] || "C4";
+                notes[0] ||
+                "C4";
         }
+
 
         delete config.chordType;
     }
@@ -1854,7 +2210,8 @@ function chooseAction(
     // ==========================================
 
     if (
-        actionId === "chord"
+        actionId ===
+        "chord"
     ) {
 
         const chords =
@@ -1870,6 +2227,7 @@ function chooseAction(
                     chord =>
                         chord.root ===
                             config.value &&
+
                         chord.type ===
                             (
                                 config.chordType ||
@@ -1897,7 +2255,8 @@ function chooseAction(
     // ==========================================
 
     if (
-        actionId === "drum"
+        actionId ===
+        "drum"
     ) {
 
         if (
@@ -1911,11 +2270,617 @@ function chooseAction(
                 "kick";
         }
     }
+}
+
+
+// ================================================
+// 🎛️ ESCOLLIR ACCIÓ
+// ================================================
+
+function chooseAction(
+    actionId
+) {
+
+    if (
+        !selectedHand
+    ) {
+        return;
+    }
 
 
     // ==========================================
-    // BOTÓ SELECCIONAT
+    // 🖐️ MODE MÀ SENCERA
     // ==========================================
+
+    if (
+        handModes[selectedHand] ===
+        "hand"
+    ) {
+
+        const handConfig =
+            ensureHandConfig(
+                selectedHand
+            );
+
+
+        const state =
+            selectedHandState[
+                selectedHand
+            ];
+
+
+        if (
+            actionId ===
+            "none"
+        ) {
+
+            stopWholeHandVoice(
+                selectedHand,
+                state
+            );
+
+
+            handConfig.hand[state] =
+                "none";
+
+
+            selectedAction =
+                null;
+
+
+            renderConfiguration(
+                "none"
+            );
+
+
+            updateCodePreview();
+
+            return;
+        }
+
+
+        let config =
+            handConfig.hand[state];
+
+
+        if (
+            !config ||
+            config === "none" ||
+            typeof config !== "object"
+        ) {
+
+            config = {
+                action:
+                    actionId
+            };
+
+
+            handConfig.hand[state] =
+                config;
+
+        }
+        else {
+
+            config.action =
+                actionId;
+        }
+
+
+        prepareActionConfig(
+            config,
+            actionId
+        );
+
+
+        selectedAction =
+            actionId;
+
+
+        renderConfiguration(
+            config
+        );
+
+
+        updateCodePreview();
+
+        return;
+    }
+
+
+    // ==========================================
+    // 👆 MODE DITS
+    // ==========================================
+
+    if (
+        !selectedFinger
+    ) {
+        return;
+    }
+
+
+    const handConfig =
+        ensureHandConfig(
+            selectedHand
+        );
+
+
+    if (
+        actionId ===
+        "none"
+    ) {
+
+        stopHandVoices(
+            selectedHand
+        );
+
+
+        handConfig.fingers[
+            selectedFinger
+        ] =
+            "none";
+
+
+        selectedAction =
+            null;
+
+
+        renderConfiguration(
+            "none"
+        );
+
+
+        updateCodePreview();
+
+        return;
+    }
+
+
+    let config =
+        handConfig.fingers[
+            selectedFinger
+        ];
+
+
+    if (
+        !config ||
+        config === "none" ||
+        typeof config !== "object"
+    ) {
+
+        config = {
+            action:
+                actionId
+        };
+
+
+        handConfig.fingers[
+            selectedFinger
+        ] =
+            config;
+
+    }
+    else {
+
+        config.action =
+            actionId;
+    }
+
+
+    prepareActionConfig(
+        config,
+        actionId
+    );
+
+
+    selectedAction =
+        actionId;
+
+
+    renderConfiguration(
+        config
+    );
+
+
+    updateCodePreview();
+}
+
+
+// ================================================
+// 🛑 ATURAR ACCIÓ DE MÀ SENCERA
+// ================================================
+
+function stopWholeHandVoice(
+    hand,
+    state
+) {
+
+    const voiceId =
+        getWholeHandVoiceId(
+            hand,
+            state
+        );
+
+
+    stopNote(
+        voiceId
+    );
+
+    stopChord(
+        voiceId
+    );
+
+    removeDrumTrack(
+        voiceId
+    );
+
+
+    if (
+        activeHandStates[hand] ===
+        state
+    ) {
+
+        activeHandStates[hand] =
+            null;
+    }
+}
+
+
+// ================================================
+// ⚙️ CANVIAR MODE DE LA MÀ
+// ================================================
+
+function setHandMode(
+    hand,
+    mode
+) {
+
+    const config =
+        ensureHandConfig(
+            hand
+        );
+
+
+    stopHandVoices(
+        hand
+    );
+
+
+    handModes[hand] =
+        mode;
+
+    config.mode =
+        mode;
+
+
+    selectedHand =
+        hand;
+
+    selectedFinger =
+        null;
+
+
+    if (
+        mode ===
+        "fingers"
+    ) {
+
+        const handConfiguration =
+            document.getElementById(
+                `${hand}-hand-configuration`
+            );
+
+
+        const fingerMode =
+            document.getElementById(
+                `${hand}-finger-mode`
+            );
+
+
+        if (handConfiguration) {
+
+            handConfiguration.classList.add(
+                "hidden"
+            );
+        }
+
+
+        if (fingerMode) {
+
+            fingerMode.classList.remove(
+                "hidden"
+            );
+        }
+
+
+        updateFingerButtons(
+            hand
+        );
+
+
+        updateHandStateButtons(
+            hand
+        );
+
+
+        const selected =
+            document.getElementById(
+                "selected-finger"
+            );
+
+
+        if (selected) {
+
+            selected.textContent =
+                `${hand === "left" ? "👈" : "👉"} Selecciona un dit`;
+        }
+
+
+        const valueArea =
+            document.getElementById(
+                "value-area"
+            );
+
+
+        if (valueArea) {
+
+            valueArea.classList.add(
+                "hidden"
+            );
+
+            valueArea.innerHTML =
+                "";
+        }
+    }
+
+    else {
+
+        const handConfiguration =
+            document.getElementById(
+                `${hand}-hand-configuration`
+            );
+
+
+        const fingerMode =
+            document.getElementById(
+                `${hand}-finger-mode`
+            );
+
+
+        if (handConfiguration) {
+
+            handConfiguration.classList.remove(
+                "hidden"
+            );
+        }
+
+
+        if (fingerMode) {
+
+            fingerMode.classList.add(
+                "hidden"
+            );
+        }
+
+
+        updateFingerButtons(
+            hand
+        );
+
+
+        updateHandStateButtons(
+            hand
+        );
+
+
+        loadCurrentHandConfiguration();
+    }
+
+
+    updateCodePreview();
+}
+// ================================================
+// ⚙️ CONTROLS DE MODE DE LA MÀ
+// ================================================
+
+function setupHandModeControls() {
+
+    for (
+        const hand
+        of [
+            "left",
+            "right"
+        ]
+    ) {
+
+        const personalizeButton =
+            document.getElementById(
+                `personalize-${hand}`
+            );
+
+
+        if (
+            personalizeButton
+        ) {
+
+            personalizeButton.addEventListener(
+                "click",
+                () => {
+
+                    setHandMode(
+                        hand,
+                        "fingers"
+                    );
+                }
+            );
+        }
+
+
+        document
+            .querySelectorAll(
+                `.back-to-hand-button[data-hand="${hand}"]`
+            )
+            .forEach(
+                button => {
+
+                    button.addEventListener(
+                        "click",
+                        () => {
+
+                            setHandMode(
+                                hand,
+                                "hand"
+                            );
+                        }
+                    );
+                }
+            );
+
+
+        document
+            .querySelectorAll(
+                `.hand-mode-button[data-hand="${hand}"][data-state]`
+            )
+            .forEach(
+                button => {
+
+                    button.addEventListener(
+                        "click",
+                        () => {
+
+                            selectHandState(
+                                hand,
+                                button.dataset.state
+                            );
+                        }
+                    );
+                }
+            );
+    }
+}
+
+
+// ================================================
+// 👆 ACTIVAR / DESACTIVAR BOTONS DELS DITS
+// ================================================
+
+function updateFingerButtons(
+    hand
+) {
+
+    const enabled =
+        handModes[hand] ===
+        "fingers";
+
+
+    document
+        .querySelectorAll(
+            `.finger-button[data-hand="${hand}"]`
+        )
+        .forEach(
+            button => {
+
+                button.disabled =
+                    !enabled;
+
+
+                button.classList.toggle(
+                    "selected",
+
+                    enabled &&
+                    button.dataset.finger ===
+                        selectedFinger
+                );
+            }
+        );
+}
+
+
+// ================================================
+// 🖐️ ACTUALITZAR BOTONS MÀ SENCERA
+// ================================================
+
+function updateHandStateButtons(
+    hand
+) {
+
+    const enabled =
+        handModes[hand] ===
+        "hand";
+
+
+    document
+        .querySelectorAll(
+            `.hand-mode-button[data-hand="${hand}"][data-state]`
+        )
+        .forEach(
+            button => {
+
+                button.disabled =
+                    !enabled;
+
+
+                button.classList.toggle(
+                    "selected",
+
+                    enabled &&
+                    button.dataset.state ===
+                        selectedHandState[hand]
+                );
+            }
+        );
+}
+
+
+// ================================================
+// 👆 PREPARAR BOTONS DELS DITS
+// ================================================
+
+function setupFingerButtons() {
+
+    document
+        .querySelectorAll(
+            ".finger-button"
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        if (
+                            button.disabled
+                        ) {
+                            return;
+                        }
+
+
+                        selectFinger(
+                            button.dataset.hand,
+                            button.dataset.finger
+                        );
+                    }
+                );
+            }
+        );
+}
+
+
+// ================================================
+// 🎛️ PREPARAR BOTONS D'ACCIÓ
+// ================================================
+
+function setupActionButtons() {
+
+    const allowedActions = [
+
+        "none",
+        "note",
+        "chord",
+        "drum"
+
+    ];
+
 
     document
         .querySelectorAll(
@@ -1924,66 +2889,38 @@ function chooseAction(
         .forEach(
             button => {
 
-                button.classList.toggle(
-                    "selected",
+                const action =
+                    button.dataset.action;
 
-                    button.dataset.action ===
-                        actionId
+
+                // No afegim accions noves.
+                // Si l'HTML en conté alguna altra,
+                // queda amagada.
+
+                if (
+                    !allowedActions.includes(
+                        action
+                    )
+                ) {
+
+                    button.hidden =
+                        true;
+
+                    return;
+                }
+
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        chooseAction(
+                            action
+                        );
+                    }
                 );
             }
         );
-
-
-    const valueArea =
-        document.getElementById(
-            "value-area"
-        );
-
-
-    if (valueArea) {
-
-        valueArea.classList.remove(
-            "hidden"
-        );
-
-
-        if (
-            actionId === "note"
-        ) {
-
-            createNoteSelector(
-                config.value
-            );
-        }
-
-        else if (
-            actionId === "chord"
-        ) {
-
-            createChordSelector(
-                config.value,
-                config.chordType
-            );
-        }
-
-        else if (
-            actionId === "drum"
-        ) {
-
-            createDrumSelector(
-                config.value
-            );
-        }
-
-        else {
-
-            valueArea.innerHTML =
-                "";
-        }
-    }
-
-
-    updateCodePreview();
 }
 
 
@@ -1997,12 +2934,15 @@ function changeScale(value) {
         value;
 
 
-    // Revalidem totes les notes
-    // i tots els acords ja configurats.
+    const notes =
+        getAvailableNotes();
+
 
     const hands = [
+
         instrumentConfig.leftHand,
         instrumentConfig.rightHand
+
     ];
 
 
@@ -2011,83 +2951,182 @@ function changeScale(value) {
         of hands
     ) {
 
-        for (
-            const finger
-            of [
-                "thumb",
-                "index",
-                "middle",
-                "ring",
-                "pinky"
-            ]
+        const handConfig =
+            hand;
+
+
+        // ==========================================
+        // 👆 CONFIGURACIÓ DELS DITS
+        // ==========================================
+
+        if (
+            handConfig.fingers
         ) {
 
-            const config =
-                hand[finger];
-
-
-            if (
-                !config ||
-                config === "none" ||
-                typeof config !== "object"
-            ) {
-                continue;
-            }
-
-
-            // 🎵 NOTA
-
-            if (
-                config.action === "note"
+            for (
+                const finger
+                of [
+                    "thumb",
+                    "index",
+                    "middle",
+                    "ring",
+                    "pinky"
+                ]
             ) {
 
-                const notes =
-                    getAvailableNotes();
+                const config =
+                    handConfig.fingers[
+                        finger
+                    ];
+
 
                 if (
-                    !notes.includes(
-                        config.value
-                    )
+                    !config ||
+                    config === "none" ||
+                    typeof config !== "object"
+                ) {
+                    continue;
+                }
+
+
+                if (
+                    config.action ===
+                    "note"
                 ) {
 
-                    config.value =
-                        notes[0] || "C4";
+                    if (
+                        !notes.includes(
+                            config.value
+                        )
+                    ) {
+
+                        config.value =
+                            notes[0] ||
+                            "C4";
+                    }
+                }
+
+
+                if (
+                    config.action ===
+                    "chord"
+                ) {
+
+                    const chords =
+                        getAvailableChords();
+
+
+                    const valid =
+                        chords.some(
+                            chord =>
+                                chord.root ===
+                                    config.value &&
+
+                                chord.type ===
+                                    (
+                                        config.chordType ||
+                                        "major"
+                                    )
+                        );
+
+
+                    if (
+                        !valid &&
+                        chords.length > 0
+                    ) {
+
+                        config.value =
+                            chords[0].root;
+
+                        config.chordType =
+                            chords[0].type;
+                    }
                 }
             }
+        }
 
 
-            // 🎹 ACORD
+        // ==========================================
+        // 🖐️ CONFIGURACIÓ DE LA MÀ
+        // ==========================================
 
-            if (
-                config.action === "chord"
+        if (
+            handConfig.hand
+        ) {
+
+            for (
+                const state
+                of [
+                    "open",
+                    "closed"
+                ]
             ) {
 
-                const chords =
-                    getAvailableChords();
-
-                const valid =
-                    chords.some(
-                        chord =>
-                            chord.root ===
-                                config.value &&
-                            chord.type ===
-                                (
-                                    config.chordType ||
-                                    "major"
-                                )
-                    );
+                const config =
+                    handConfig.hand[state];
 
 
                 if (
-                    !valid &&
-                    chords.length > 0
+                    !config ||
+                    config === "none" ||
+                    typeof config !== "object"
+                ) {
+                    continue;
+                }
+
+
+                if (
+                    config.action ===
+                    "note"
                 ) {
 
-                    config.value =
-                        chords[0].root;
+                    if (
+                        !notes.includes(
+                            config.value
+                        )
+                    ) {
 
-                    config.chordType =
-                        chords[0].type;
+                        config.value =
+                            notes[0] ||
+                            "C4";
+                    }
+                }
+
+
+                if (
+                    config.action ===
+                    "chord"
+                ) {
+
+                    const chords =
+                        getAvailableChords();
+
+
+                    const valid =
+                        chords.some(
+                            chord =>
+                                chord.root ===
+                                    config.value &&
+
+                                chord.type ===
+                                    (
+                                        config.chordType ||
+                                        "major"
+                                    )
+                        );
+
+
+                    if (
+                        !valid &&
+                        chords.length > 0
+                    ) {
+
+                        config.value =
+                            chords[0].root;
+
+                        config.chordType =
+                            chords[0].type;
+                    }
                 }
             }
         }
@@ -2108,11 +3147,23 @@ function changeScale(value) {
 
 
     if (
-        selectedHand &&
-        selectedFinger
+        selectedHand
     ) {
 
-        loadCurrentConfiguration();
+        if (
+            handModes[selectedHand] ===
+            "hand"
+        ) {
+
+            loadCurrentHandConfiguration();
+
+        }
+        else if (
+            selectedFinger
+        ) {
+
+            loadCurrentConfiguration();
+        }
     }
 
 
@@ -2190,11 +3241,12 @@ function changeTempo(value) {
     }
 
 
-    // Si estem editant bateria,
+    // Si estem configurant bateria,
     // actualitzem el text informatiu.
 
     if (
-        selectedAction === "drum"
+        selectedAction ===
+        "drum"
     ) {
 
         const valueArea =
@@ -2202,19 +3254,54 @@ function changeTempo(value) {
                 "value-area"
             );
 
+
         if (valueArea) {
 
-            const config =
-                getFingerConfig(
-                    selectedHand,
-                    selectedFinger
-                );
+            let config;
+
+
+            if (
+                selectedHand &&
+                handModes[selectedHand] ===
+                    "hand"
+            ) {
+
+                const handConfig =
+                    ensureHandConfig(
+                        selectedHand
+                    );
+
+
+                config =
+                    handConfig.hand[
+                        selectedHandState[
+                            selectedHand
+                        ]
+                    ];
+
+            }
+            else if (
+                selectedHand &&
+                selectedFinger
+            ) {
+
+                config =
+                    getFingerConfig(
+                        selectedHand,
+                        selectedFinger
+                    );
+            }
+
 
             createDrumSelector(
-                config?.value || "kick"
+                config?.value ||
+                "kick"
             );
         }
     }
+
+
+    updateCodePreview();
 }
 
 
@@ -2239,37 +3326,72 @@ function setupGlobalScaleSelector() {
         "";
 
 
-    const free =
-        document.createElement(
-            "option"
-        );
-
-    free.value =
-        "Lliure";
-
-    free.textContent =
-        "🎨 Lliure — totes les notes";
-
-    select.appendChild(
-        free
-    );
-
-
     const scales = [
 
-        "C major",
-        "G major",
-        "D major",
-        "A major",
-        "E major",
-        "F major",
-        "Bb major",
+        {
+            value: "C major",
+            label: "Do major"
+        },
 
-        "A minor",
-        "E minor",
-        "D minor",
-        "G minor",
-        "C minor"
+        {
+            value: "G major",
+            label: "Sol major"
+        },
+
+        {
+            value: "D major",
+            label: "Re major"
+        },
+
+        {
+            value: "A major",
+            label: "La major"
+        },
+
+        {
+            value: "E major",
+            label: "Mi major"
+        },
+
+        {
+            value: "F major",
+            label: "Fa major"
+        },
+
+        {
+            value: "Bb major",
+            label: "Sib major"
+        },
+
+        {
+            value: "A minor",
+            label: "La menor"
+        },
+
+        {
+            value: "E minor",
+            label: "Mi menor"
+        },
+
+        {
+            value: "D minor",
+            label: "Re menor"
+        },
+
+        {
+            value: "G minor",
+            label: "Sol menor"
+        },
+
+        {
+            value: "C minor",
+            label: "Do menor"
+        },
+
+        {
+            value: "Lliure",
+            label: "🎨 Lliure — totes les notes"
+        }
 
     ];
 
@@ -2284,11 +3406,14 @@ function setupGlobalScaleSelector() {
                 "option"
             );
 
+
         option.value =
-            scale;
+            scale.value;
+
 
         option.textContent =
-            scale;
+            scale.label;
+
 
         select.appendChild(
             option
@@ -2356,8 +3481,6 @@ function setupGlobalTempoSelector() {
         }
     );
 }
-
-
 // ================================================
 // 💻 PREVISUALITZACIÓ DEL CODI
 // ================================================
@@ -2375,8 +3498,7 @@ function updateCodePreview() {
     }
 
 
-    function formatFinger(
-        name,
+    function formatConfig(
         config
     ) {
 
@@ -2385,15 +3507,16 @@ function updateCodePreview() {
             config === "none"
         ) {
 
-            return `${name}: "none"`;
+            return '"none"';
         }
 
 
         if (
-            config.action === "note"
+            config.action ===
+            "note"
         ) {
 
-            return `${name}: {
+            return `{
     action: "note",
     value: "${config.value}"
 }`;
@@ -2401,10 +3524,11 @@ function updateCodePreview() {
 
 
         if (
-            config.action === "chord"
+            config.action ===
+            "chord"
         ) {
 
-            return `${name}: {
+            return `{
     action: "chord",
     value: "${config.value}",
     chordType: "${config.chordType}"
@@ -2413,27 +3537,72 @@ function updateCodePreview() {
 
 
         if (
-            config.action === "drum"
+            config.action ===
+            "drum"
         ) {
 
-            return `${name}: {
+            return `{
     action: "drum",
     value: "${config.value}"
 }`;
         }
 
 
-        return `${name}: {
+        return `{
     action: "${config.action}"
 }`;
     }
 
 
+    function formatHand(
+        hand
+    ) {
+
+        return `{
+    open: ${formatConfig(
+        hand?.open
+    )},
+    closed: ${formatConfig(
+        hand?.closed
+    )}
+}`;
+    }
+
+
+    function formatFingers(
+        fingers
+    ) {
+
+        return `{
+    thumb: ${formatConfig(
+        fingers?.thumb
+    )},
+    index: ${formatConfig(
+        fingers?.index
+    )},
+    middle: ${formatConfig(
+        fingers?.middle
+    )},
+    ring: ${formatConfig(
+        fingers?.ring
+    )},
+    pinky: ${formatConfig(
+        fingers?.pinky
+    )}
+}`;
+    }
+
+
     const left =
-        instrumentConfig.leftHand;
+        ensureHandConfig(
+            "left"
+        );
+
 
     const right =
-        instrumentConfig.rightHand;
+        ensureHandConfig(
+            "right"
+        );
 
 
     preview.textContent =
@@ -2447,29 +3616,14 @@ tempo: ${selectedTempo}
 
 let esquerra = {
 
-    ${formatFinger(
-        "thumb",
-        left.thumb
+    mode: "${left.mode}",
+
+    hand: ${formatHand(
+        left.hand
     )},
 
-    ${formatFinger(
-        "index",
-        left.index
-    )},
-
-    ${formatFinger(
-        "middle",
-        left.middle
-    )},
-
-    ${formatFinger(
-        "ring",
-        left.ring
-    )},
-
-    ${formatFinger(
-        "pinky",
-        left.pinky
+    fingers: ${formatFingers(
+        left.fingers
     )}
 
 };
@@ -2479,29 +3633,14 @@ let esquerra = {
 
 let dreta = {
 
-    ${formatFinger(
-        "thumb",
-        right.thumb
+    mode: "${right.mode}",
+
+    hand: ${formatHand(
+        right.hand
     )},
 
-    ${formatFinger(
-        "index",
-        right.index
-    )},
-
-    ${formatFinger(
-        "middle",
-        right.middle
-    )},
-
-    ${formatFinger(
-        "ring",
-        right.ring
-    )},
-
-    ${formatFinger(
-        "pinky",
-        right.pinky
+    fingers: ${formatFingers(
+        right.fingers
     )}
 
 };`;
@@ -2509,7 +3648,60 @@ let dreta = {
 
 
 // ================================================
-// 💾 GUARDAR
+// 💾 GUARDAR CONFIGURACIÓ
+// ================================================
+
+function saveInstrument() {
+
+    const data = {
+
+        scale:
+            selectedScale,
+
+        tempo:
+            selectedTempo,
+
+        leftHand:
+            instrumentConfig.leftHand,
+
+        rightHand:
+            instrumentConfig.rightHand
+    };
+
+
+    localStorage.setItem(
+        "ekhoWorkshopConfig",
+        JSON.stringify(data)
+    );
+
+
+    const message =
+        document.getElementById(
+            "save-message"
+        );
+
+
+    if (message) {
+
+        message.textContent =
+            "💾 Instrument guardat!";
+
+
+        setTimeout(
+            () => {
+
+                message.textContent =
+                    "";
+
+            },
+            2500
+        );
+    }
+}
+
+
+// ================================================
+// 💾 BOTÓ GUARDAR
 // ================================================
 
 const saveButton =
@@ -2522,94 +3714,659 @@ if (saveButton) {
 
     saveButton.addEventListener(
         "click",
-        () => {
-
-            const data = {
-
-                scale:
-                    selectedScale,
-
-                tempo:
-                    selectedTempo,
-
-                leftHand:
-                    instrumentConfig.leftHand,
-
-                rightHand:
-                    instrumentConfig.rightHand
-
-            };
-
-
-            localStorage.setItem(
-                "ekhoWorkshopConfig",
-                JSON.stringify(data)
-            );
-
-
-            const message =
-                document.getElementById(
-                    "save-message"
-                );
-
-
-            if (message) {
-
-                message.textContent =
-                    "💾 Instrument guardat!";
-            }
-        }
+        saveInstrument
     );
 }
 
 
 // ================================================
-// 👆 BOTONS DELS DITS
+// 📂 CARREGAR CONFIGURACIÓ GUARDADA
 // ================================================
 
-document
-    .querySelectorAll(
-        ".finger-button"
-    )
-    .forEach(
-        button => {
+function loadSavedConfiguration() {
 
-            button.addEventListener(
+    const saved =
+        localStorage.getItem(
+            "ekhoWorkshopConfig"
+        );
+
+
+    if (!saved) {
+        return;
+    }
+
+
+    try {
+
+        const data =
+            JSON.parse(saved);
+
+
+        if (
+            data.scale
+        ) {
+
+            selectedScale =
+                data.scale;
+        }
+
+
+        if (
+            data.tempo
+        ) {
+
+            selectedTempo =
+                Number(
+                    data.tempo
+                );
+        }
+
+
+        if (
+            data.leftHand
+        ) {
+
+            instrumentConfig.leftHand =
+                data.leftHand;
+        }
+
+
+        if (
+            data.rightHand
+        ) {
+
+            instrumentConfig.rightHand =
+                data.rightHand;
+        }
+
+
+        ensureHandConfig(
+            "left"
+        );
+
+        ensureHandConfig(
+            "right"
+        );
+
+
+    }
+    catch (error) {
+
+        console.warn(
+            "No s'ha pogut carregar la configuració guardada.",
+            error
+        );
+    }
+}
+
+
+// ================================================
+// 🖐️ PREPARAR INTERFÍCIE DE LES MANS
+// ================================================
+
+function setupInitialHandInterface() {
+
+    // IMPORTANT:
+    // El mode inicial sempre és "mà sencera".
+    //
+    // Això evita que l'alumne vegi tots els dits
+    // abans d'haver triat "Personalitza els dits".
+
+    handModes.left =
+        "hand";
+
+    handModes.right =
+        "hand";
+
+
+    instrumentConfig.leftHand.mode =
+        "hand";
+
+    instrumentConfig.rightHand.mode =
+        "hand";
+
+
+    selectedHand =
+        null;
+
+    selectedFinger =
+        null;
+
+
+    updateFingerButtons(
+        "left"
+    );
+
+    updateFingerButtons(
+        "right"
+    );
+
+
+    updateHandStateButtons(
+        "left"
+    );
+
+    updateHandStateButtons(
+        "right"
+    );
+}
+
+
+// ================================================
+// 🎨 ACTUALITZAR INTERFÍCIE SEGONS MODE
+// ================================================
+
+function refreshHandInterface(
+    hand
+) {
+
+    const mode =
+        handModes[hand];
+
+
+    const wholeHandArea =
+        document.getElementById(
+            `${hand}-hand-configuration`
+        );
+
+
+    const fingerArea =
+        document.getElementById(
+            `${hand}-finger-mode`
+        );
+
+
+    const personalizeButton =
+        document.getElementById(
+            `personalize-${hand}`
+        );
+
+
+    const backButton =
+        document.querySelector(
+            `.back-to-hand-button[data-hand="${hand}"]`
+        );
+
+
+    if (
+        mode ===
+        "fingers"
+    ) {
+
+        if (wholeHandArea) {
+
+            wholeHandArea.classList.add(
+                "hidden"
+            );
+        }
+
+
+        if (fingerArea) {
+
+            fingerArea.classList.remove(
+                "hidden"
+            );
+        }
+
+
+        if (personalizeButton) {
+
+            personalizeButton.classList.add(
+                "hidden"
+            );
+        }
+
+
+        if (backButton) {
+
+            backButton.classList.remove(
+                "hidden"
+            );
+        }
+
+    }
+    else {
+
+        if (wholeHandArea) {
+
+            wholeHandArea.classList.remove(
+                "hidden"
+            );
+        }
+
+
+        if (fingerArea) {
+
+            fingerArea.classList.add(
+                "hidden"
+            );
+        }
+
+
+        if (personalizeButton) {
+
+            personalizeButton.classList.remove(
+                "hidden"
+            );
+        }
+
+
+        if (backButton) {
+
+            backButton.classList.add(
+                "hidden"
+            );
+        }
+    }
+
+
+    updateFingerButtons(
+        hand
+    );
+
+    updateHandStateButtons(
+        hand
+    );
+}
+
+
+// ================================================
+// ⚙️ CANVIAR MODE
+// ================================================
+
+function changeHandMode(
+    hand,
+    mode
+) {
+
+    if (
+        mode !== "hand" &&
+        mode !== "fingers"
+    ) {
+        return;
+    }
+
+
+    stopHandVoices(
+        hand
+    );
+
+
+    handModes[hand] =
+        mode;
+
+
+    const config =
+        ensureHandConfig(
+            hand
+        );
+
+
+    config.mode =
+        mode;
+
+
+    selectedHand =
+        hand;
+
+    selectedFinger =
+        null;
+
+
+    refreshHandInterface(
+        hand
+    );
+
+
+    const valueArea =
+        document.getElementById(
+            "value-area"
+        );
+
+
+    if (valueArea) {
+
+        valueArea.classList.add(
+            "hidden"
+        );
+
+        valueArea.innerHTML =
+            "";
+    }
+
+
+    if (
+        mode ===
+        "hand"
+    ) {
+
+        loadCurrentHandConfiguration();
+
+    }
+    else {
+
+        const selected =
+            document.getElementById(
+                "selected-finger"
+            );
+
+
+        if (selected) {
+
+            selected.textContent =
+                `${hand === "left" ? "👈" : "👉"} Selecciona un dit`;
+        }
+    }
+
+
+    updateCodePreview();
+}
+
+
+// ================================================
+// ⚙️ PREPARAR BOTONS DE PERSONALITZACIÓ
+// ================================================
+
+function setupHandModeButtons() {
+
+    for (
+        const hand
+        of [
+            "left",
+            "right"
+        ]
+    ) {
+
+        const personalize =
+            document.getElementById(
+                `personalize-${hand}`
+            );
+
+
+        if (personalize) {
+
+            personalize.addEventListener(
                 "click",
                 () => {
 
-                    selectFinger(
-                        button.dataset.hand,
-                        button.dataset.finger
+                    changeHandMode(
+                        hand,
+                        "fingers"
                     );
                 }
             );
         }
-    );
+
+
+        const backButtons =
+            document.querySelectorAll(
+                `.back-to-hand-button[data-hand="${hand}"]`
+            );
+
+
+        backButtons.forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        changeHandMode(
+                            hand,
+                            "hand"
+                        );
+                    }
+                );
+            }
+        );
+
+
+        const stateButtons =
+            document.querySelectorAll(
+                `.hand-mode-button[data-hand="${hand}"][data-state]`
+            );
+
+
+        stateButtons.forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        if (
+                            handModes[hand] !==
+                            "hand"
+                        ) {
+                            return;
+                        }
+
+
+                        selectHandState(
+                            hand,
+                            button.dataset.state
+                        );
+                    }
+                );
+            }
+        );
+    }
+}
 
 
 // ================================================
-// 🎛️ BOTONS D'ACCIÓ
+// 👆 PREPARAR DITS
 // ================================================
 
-document
-    .querySelectorAll(
-        ".action-button"
-    )
-    .forEach(
-        button => {
+function setupFingerMode() {
 
-            button.addEventListener(
-                "click",
-                () => {
+    document
+        .querySelectorAll(
+            ".finger-button"
+        )
+        .forEach(
+            button => {
 
-                    chooseAction(
-                        button.dataset.action
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        if (
+                            button.disabled
+                        ) {
+                            return;
+                        }
+
+
+                        selectFinger(
+                            button.dataset.hand,
+                            button.dataset.finger
+                        );
+                    }
+                );
+            }
+        );
+}
+
+
+// ================================================
+// 🎛️ ACTUALITZAR ESTAT DELS DITS
+// ================================================
+
+function updateFingerModeUI(
+    hand
+) {
+
+    const enabled =
+        handModes[hand] ===
+        "fingers";
+
+
+    document
+        .querySelectorAll(
+            `.finger-button[data-hand="${hand}"]`
+        )
+        .forEach(
+            button => {
+
+                button.disabled =
+                    !enabled;
+
+
+                if (!enabled) {
+
+                    button.classList.remove(
+                        "selected"
                     );
                 }
-            );
-        }
+            }
+        );
+}
+
+
+// ================================================
+// 🖐️ ACTUALITZAR ESTAT DE MÀ
+// ================================================
+
+function updateWholeHandModeUI(
+    hand
+) {
+
+    const enabled =
+        handModes[hand] ===
+        "hand";
+
+
+    document
+        .querySelectorAll(
+            `.hand-mode-button[data-hand="${hand}"][data-state]`
+        )
+        .forEach(
+            button => {
+
+                button.disabled =
+                    !enabled;
+
+
+                button.classList.toggle(
+                    "selected",
+
+                    enabled &&
+                    button.dataset.state ===
+                        selectedHandState[hand]
+                );
+            }
+        );
+}
+
+
+// ================================================
+// 🔄 ACTUALITZAR TOTA LA UI
+// ================================================
+
+function updateHandUI(
+    hand
+) {
+
+    refreshHandInterface(
+        hand
     );
+
+    updateFingerModeUI(
+        hand
+    );
+
+    updateWholeHandModeUI(
+        hand
+    );
+}
+
+
+// ================================================
+// 🎼 ACTUALITZAR TONALITAT DESPRÉS DE CARREGAR
+// ================================================
+
+function refreshGlobalMusicUI() {
+
+    const scaleSelect =
+        document.getElementById(
+            "global-scale-select"
+        );
+
+
+    if (scaleSelect) {
+
+        scaleSelect.value =
+            selectedScale;
+    }
+
+
+    const tempoInput =
+        document.getElementById(
+            "tempo-select"
+        );
+
+
+    if (tempoInput) {
+
+        tempoInput.value =
+            selectedTempo;
+    }
+
+
+    const tempoValue =
+        document.getElementById(
+            "tempo-value"
+        );
+
+
+    if (tempoValue) {
+
+        tempoValue.textContent =
+            `${selectedTempo} BPM`;
+    }
+
+
+    setTempo(
+        selectedTempo
+    );
+}
+// ================================================
+// 🚀 PREPARAR TOTA LA INTERFÍCIE
+// ================================================
+//
+// IMPORTANT:
+// Fem tota la inicialització una sola vegada.
+// La interfície comença en mode "mà sencera".
+// Els dits només apareixen quan es prem
+// "Personalitza els dits".
+//
+
+loadSavedConfiguration();
+
+setupGlobalScaleSelector();
+
+setupGlobalTempoSelector();
+
+setupHandModeControls();
+
+setupFingerButtons();
+
+setupActionButtons();
+
+setupInitialHandInterface();
+
+refreshGlobalMusicUI();
+
+updateHandUI(
+    "left"
+);
+
+updateHandUI(
+    "right"
+);
+
+updateCodePreview();
 
 
 // ================================================
@@ -2689,15 +4446,29 @@ async function startEkho() {
                 );
 
 
+            // =====================================
+            // 🟢 VISUALS MEDIAPIPE
+            // =====================================
+
             drawHands(
                 results
             );
 
 
+            // =====================================
+            // 🔇 SI EL SO ESTÀ DESACTIVAT
+            // CONTINUEM DETECTANT I DIBUIXANT
+            // LES MANS, PERÒ NO REPRODUÏM SO
+            // =====================================
+
             if (!soundEnabled) {
                 return;
             }
 
+
+            // =====================================
+            // 🖐️ DETECTAR LES DUES MANS
+            // =====================================
 
             const detected =
                 detectBothHands(
@@ -2715,11 +4486,19 @@ async function startEkho() {
             }
 
 
+            // =====================================
+            // 👈 PROCESSAR MÀ ESQUERRA
+            // =====================================
+
             processHand(
                 "left",
                 detected.left
             );
 
+
+            // =====================================
+            // 👉 PROCESSAR MÀ DRETA
+            // =====================================
 
             processHand(
                 "right",
@@ -2728,6 +4507,7 @@ async function startEkho() {
         }
 
 
+        // Comencem el bucle de vídeo
         frame();
 
     }
@@ -2735,8 +4515,10 @@ async function startEkho() {
     catch (error) {
 
         console.error(
+            "❌ Error iniciant Ekho:",
             error
         );
+
 
         status.textContent =
             "❌ Error iniciant Ekho.";
@@ -2768,6 +4550,7 @@ if (soundButton) {
 
                 startSound();
 
+
                 setTempo(
                     selectedTempo
                 );
@@ -2786,9 +4569,8 @@ if (soundButton) {
                     "🟢 So activat";
 
 
-                // Forcem una nova detecció
-                // perquè els dits actuals
-                // puguin tornar a sonar.
+                // Reiniciem l'estat de les veus
+                // perquè no quedin notes penjades.
 
                 for (
                     const hand
@@ -2814,6 +4596,12 @@ if (soundButton) {
                         ][finger] =
                             false;
                     }
+
+
+                    activeHandStates[
+                        hand
+                    ] =
+                        null;
                 }
 
             }
@@ -2844,22 +4632,9 @@ if (soundButton) {
                     ]
                 ) {
 
-                    for (
-                        const finger
-                        of [
-                            "thumb",
-                            "index",
-                            "middle",
-                            "ring",
-                            "pinky"
-                        ]
-                    ) {
-
-                        activeNotes[
-                            hand
-                        ][finger] =
-                            false;
-                    }
+                    stopHandVoices(
+                        hand
+                    );
                 }
             }
         }
@@ -2868,17 +4643,21 @@ if (soundButton) {
 
 
 // ================================================
-// 🚀 INICI
+// 🚀 ARRANCAR EL TALLER
 // ================================================
-
-setTempo(
-    selectedTempo
-);
-
-setupGlobalScaleSelector();
-
-setupGlobalTempoSelector();
-
-updateCodePreview();
+//
+// IMPORTANT:
+// Aquesta línia és la que posa en marxa
+// la càmera + MediaPipe + el bucle de detecció.
+//
 
 startEkho();
+
+
+// ================================================
+// 🏁 FI
+// ================================================
+
+console.log(
+    "🎛️ Ekho Workshop iniciat."
+);

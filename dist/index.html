@@ -268,46 +268,19 @@
 
             font-size: 15px;
 
-            transition:
-                background 0.15s ease,
-                border-color 0.15s ease,
-                box-shadow 0.15s ease,
-                transform 0.1s ease;
-
         }
 
         .hand-mode-button:hover {
 
             background: #3c3c3c;
 
-            border-color: #666;
-
-            transform:
-                translateY(-1px);
-
         }
 
         .hand-mode-button.selected {
 
-            background:
-                rgba(
-                    139,
-                    92,
-                    246,
-                    0.16
-                );
+            background: #00a86b;
 
-            border-color:
-                #9b7cf6;
-
-            box-shadow:
-                0 0 0 1px
-                rgba(
-                    155,
-                    124,
-                    246,
-                    0.15
-                );
+            border-color: #00a86b;
 
         }
 
@@ -320,9 +293,63 @@
         }
 
 
-        /* =========================================
-           CONFIGURACIÓ DE LA MÀ
-           ========================================= */
+        .personalize-hand-button {
+
+            width: 100%;
+
+            border: 1px solid #555;
+
+            background: #303030;
+
+            color: white;
+
+            border-radius: 10px;
+
+            padding: 13px 15px;
+
+            cursor: pointer;
+
+            font-size: 15px;
+
+            margin-top: 10px;
+
+        }
+
+        .personalize-hand-button:hover {
+
+            background: #3c3c3c;
+
+            border-color: #00a86b;
+
+        }
+
+
+        .back-to-hand-button {
+
+            border: 1px solid #555;
+
+            background: #242424;
+
+            color: #aaa;
+
+            border-radius: 8px;
+
+            padding: 8px 12px;
+
+            cursor: pointer;
+
+            font-size: 13px;
+
+        }
+
+        .back-to-hand-button:hover {
+
+            color: white;
+
+            background: #303030;
+
+        }
+
 
         .hand-configuration {
 
@@ -423,46 +450,20 @@
 
             font-size: 14px;
 
-            transition:
-                background 0.15s ease,
-                border-color 0.15s ease,
-                box-shadow 0.15s ease,
-                transform 0.1s ease;
-
         }
 
         .finger-button:hover {
 
             background: #3c3c3c;
 
-            border-color: #666;
-
-            transform:
-                translateY(-1px);
-
         }
 
         .finger-button.selected {
 
-            background:
-                rgba(
-                    139,
-                    92,
-                    246,
-                    0.16
-                );
+            background: #00a86b;
 
             border-color:
-                #9b7cf6;
-
-            box-shadow:
-                0 0 0 1px
-                rgba(
-                    155,
-                    124,
-                    246,
-                    0.15
-                );
+                #00a86b;
 
         }
 
@@ -503,7 +504,7 @@
 
         #selected-finger {
 
-            color: #b69cff;
+            color: #00ff88;
 
             font-weight: bold;
 
@@ -548,10 +549,9 @@
             font-size: 15px;
 
             transition:
-                background 0.15s ease,
-                transform 0.1s ease,
-                border-color 0.15s ease,
-                box-shadow 0.15s ease;
+                background 0.15s,
+                transform 0.1s,
+                border-color 0.15s;
 
         }
 
@@ -562,31 +562,14 @@
             transform:
                 translateY(-1px);
 
-            border-color: #666;
-
         }
 
         .action-button.selected {
 
-            background:
-                rgba(
-                    139,
-                    92,
-                    246,
-                    0.16
-                );
+            background: #00a86b;
 
             border-color:
-                #9b7cf6;
-
-            box-shadow:
-                0 0 0 1px
-                rgba(
-                    155,
-                    124,
-                    246,
-                    0.15
-                );
+                #00a86b;
 
         }
 
@@ -663,17 +646,7 @@
 
             outline: none;
 
-            border-color:
-                #9b7cf6;
-
-            box-shadow:
-                0 0 0 2px
-                rgba(
-                    139,
-                    92,
-                    246,
-                    0.15
-                );
+            border-color: #00a86b;
 
         }
 
@@ -808,8 +781,7 @@
 
             border: none;
 
-            background:
-                #8b5cf6;
+            background: #00a86b;
 
             color: white;
 
@@ -825,26 +797,17 @@
 
             font-weight: bold;
 
-            transition:
-                background 0.15s ease,
-                transform 0.1s ease;
-
         }
 
         #save-instrument:hover {
 
-            background:
-                #9b7cf6;
-
-            transform:
-                translateY(-1px);
+            background: #00bd78;
 
         }
 
         #save-message {
 
-            color:
-                #b69cff;
+            color: #00ff88;
 
             font-size: 14px;
 
@@ -981,6 +944,7 @@
 
     </style>
 
+  <script type="module" crossorigin src="/assets/index-C3ZOijKV.js"></script>
 </head>
 
 
@@ -1092,7 +1056,7 @@
                     </div>
 
 
-                    <!-- MODE DE CONFIGURACIÓ -->
+                    <!-- MODE MÀ SENCERA -->
 
                     <div
                         class="hand-mode-selector"
@@ -1101,7 +1065,6 @@
 
                         <button
                             class="hand-mode-button selected"
-                            id="left-hand-mode"
                             data-hand="left"
                             data-mode="hand"
                             type="button"
@@ -1109,20 +1072,8 @@
                             🖐️ Mà sencera
                         </button>
 
-                        <button
-                            class="hand-mode-button"
-                            id="personalize-left"
-                            data-hand="left"
-                            data-mode="fingers"
-                            type="button"
-                        >
-                            ⚙️ Personalitza els dits
-                        </button>
-
                     </div>
 
-
-                    <!-- CONFIGURACIÓ DE LA MÀ SENCERA -->
 
                     <div
                         class="hand-configuration"
@@ -1162,6 +1113,18 @@
                     </div>
 
 
+                    <!-- PERSONALITZAR -->
+
+                    <button
+                        class="personalize-hand-button"
+                        id="personalize-left"
+                        data-hand="left"
+                        type="button"
+                    >
+                        ⚙️ Personalitza els dits
+                    </button>
+
+
                     <!-- MODE DITS -->
 
                     <div
@@ -1174,6 +1137,14 @@
                             <div class="finger-mode-title">
                                 🎛️ Ara pots configurar cada dit per separat
                             </div>
+
+                            <button
+                                class="back-to-hand-button"
+                                data-hand="left"
+                                type="button"
+                            >
+                                ← Tornar a mà sencera
+                            </button>
 
                         </div>
 
@@ -1266,7 +1237,7 @@
                     </div>
 
 
-                    <!-- MODE DE CONFIGURACIÓ -->
+                    <!-- MODE MÀ SENCERA -->
 
                     <div
                         class="hand-mode-selector"
@@ -1275,7 +1246,6 @@
 
                         <button
                             class="hand-mode-button selected"
-                            id="right-hand-mode"
                             data-hand="right"
                             data-mode="hand"
                             type="button"
@@ -1283,20 +1253,8 @@
                             🖐️ Mà sencera
                         </button>
 
-                        <button
-                            class="hand-mode-button"
-                            id="personalize-right"
-                            data-hand="right"
-                            data-mode="fingers"
-                            type="button"
-                        >
-                            ⚙️ Personalitza els dits
-                        </button>
-
                     </div>
 
-
-                    <!-- CONFIGURACIÓ DE LA MÀ SENCERA -->
 
                     <div
                         class="hand-configuration"
@@ -1336,6 +1294,18 @@
                     </div>
 
 
+                    <!-- PERSONALITZAR -->
+
+                    <button
+                        class="personalize-hand-button"
+                        id="personalize-right"
+                        data-hand="right"
+                        type="button"
+                    >
+                        ⚙️ Personalitza els dits
+                    </button>
+
+
                     <!-- MODE DITS -->
 
                     <div
@@ -1348,6 +1318,14 @@
                             <div class="finger-mode-title">
                                 🎛️ Ara pots configurar cada dit per separat
                             </div>
+
+                            <button
+                                class="back-to-hand-button"
+                                data-hand="right"
+                                type="button"
+                            >
+                                ← Tornar a mà sencera
+                            </button>
 
                         </div>
 
@@ -1606,10 +1584,6 @@
     </main>
 
 
-    <script
-        type="module"
-        src="app.js"
-    ></script>
 
 
 </body>

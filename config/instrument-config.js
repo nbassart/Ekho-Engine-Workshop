@@ -2,65 +2,120 @@
 // 🎛️ EL MEU INSTRUMENT
 // ================================================
 //
-// Aquí pots crear el teu propi instrument.
-//
-// Canvia les paraules que hi ha entre cometes
-// i prova què passa!
+// Primer pots decidir què fa tota la mà.
+// Si vols més control, pots personalitzar
+// cada dit per separat.
 //
 // 📖 Tens la llegenda a la pantalla del taller.
 // ================================================
 
 
-
+// ================================================
 // 👈 MÀ ESQUERRA
 // ================================================
 
 let esquerra = {
 
-    // 👍 POLZE
-    thumb: "none",
+    // "hand"    → configura la mà sencera
+    // "fingers" → personalitza els dits
+    mode: "fingers",
 
-    // ☝️ ÍNDEX
-    index: {
-    action: "note",
-    value: "C4"
+
+    // ==========================================
+    // 🖐️ CONFIGURACIÓ DE LA MÀ
+    // ==========================================
+
+    hand: {
+
+        // 🖐️ Quan la mà està oberta
+        open: {
+            action: "note",
+            value: "C4"
+        },
+
+        // ✊ Quan la mà està tancada
+        closed: "none"
+
     },
 
-    // 🖕 MIG
-    middle: "none",
 
-    // 💍 ANULAR
-    ring: "none",
+    // ==========================================
+    // 👇 CONFIGURACIÓ DELS DITS
+    // ==========================================
 
-    // 🤙 MENOVELL
-    pinky: "none"
+    fingers: {
+
+        // 👍 POLZE
+        thumb: "none",
+
+        // ☝️ ÍNDEX
+        index: {
+            action: "note",
+            value: "C4"
+        },
+
+        // 🖕 MIG
+        middle: "none",
+
+        // 💍 ANULAR
+        ring: "none",
+
+        // 🤙 MENOVELL
+        pinky: "none"
+
+    }
 
 };
 
 
-
+// ================================================
 // 👉 MÀ DRETA
 // ================================================
 
 let dreta = {
 
-    // 👍 POLZE
-    thumb: "none",
+    mode: "fingers",
 
-    // ☝️ ÍNDEX
-    index: "none",
 
-    // 🖕 MIG
-    middle: "none",
+    // ==========================================
+    // 🖐️ CONFIGURACIÓ DE LA MÀ
+    // ==========================================
 
-    // 💍 ANULAR
-    ring: "none",
+    hand: {
 
-    // 🤙 MENOVELL
-    pinky: "none"
+        // 🖐️ Quan la mà està oberta
+        open: "none",
+
+        // ✊ Quan la mà està tancada
+        closed: "none"
+
+    },
+
+
+    // ==========================================
+    // 👇 CONFIGURACIÓ DELS DITS
+    // ==========================================
+
+    fingers: {
+
+        // 👍 POLZE
+        thumb: "none",
+
+        // ☝️ ÍNDEX
+        index: "none",
+
+        // 🖕 MIG
+        middle: "none",
+
+        // 💍 ANULAR
+        ring: "none",
+
+        // 🤙 MENOVELL
+        pinky: "none"
+
+    }
 
 };
-
 
 
 // ================================================
