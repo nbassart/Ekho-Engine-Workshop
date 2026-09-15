@@ -1,3 +1,8 @@
+import {
+    setupHandsUI,
+    refreshHandUI
+} from "./ui/hands-ui.js";
+
 // ================================================
 // 🎛️ EKHO WORKSHOP
 // ================================================
@@ -37,6 +42,11 @@ import {
     drumPatterns,
     chordTypes
 } from "./music/actions.js";
+
+import {
+    setupGlobalMusicUI,
+    refreshGlobalMusicUI
+} from "./ui/music-ui.js";
 
 
 // ================================================
@@ -1617,6 +1627,8 @@ function createDrumSelector(
         select
     );
 }
+
+
 // ================================================
 // 🎵 CANVIAR NOTA
 // ================================================
@@ -1842,9 +1854,6 @@ function selectFinger(
     finger
 ) {
 
-    // Els dits només estan disponibles
-    // en mode "fingers".
-
     if (
         handModes[hand] !==
         "fingers"
@@ -1956,24 +1965,61 @@ function selectHandState(
         );
 
 
+    updateSelectedTargetLabel(
+        hand,
+        state
+    );
+
+
+    loadCurrentHandConfiguration();
+}
+
+
+// ================================================
+// 🏷️ ACTUALITZAR ELEMENT SELECCIONAT
+// ================================================
+//
+// Aquest és el canvi important:
+//
+// Quan tornem a "Mà sencera", l'editor deixa de
+// mostrar "Selecciona un dit" i passa a mostrar
+// directament l'estat actual de la mà.
+//
+// ================================================
+
+function updateSelectedTargetLabel(
+    hand,
+    state = null
+) {
+
     const selected =
         document.getElementById(
             "selected-finger"
         );
 
 
-    if (selected) {
-
-        selected.textContent =
-            `${hand === "left" ? "👈" : "👉"} ${
-                state === "open"
-                    ? "🖐️ Mà oberta"
-                    : "✊ Mà tancada"
-            }`;
+    if (!selected) {
+        return;
     }
 
 
-    loadCurrentHandConfiguration();
+    if (
+        state === null
+    ) {
+
+        state =
+            selectedHandState[
+                hand
+            ];
+    }
+
+
+    selected.textContent =
+        `${hand === "left" ? "👈" : "👉"} ${
+            state === "open"
+                ? "🖐️ Mà oberta"
+                : "✊ Mà tancada"
+        }`;
 }
 
 
@@ -2029,6 +2075,16 @@ function loadCurrentHandConfiguration() {
         ];
 
 
+    // ==========================================
+    // 🏷️ ACTUALITZAR TEXT DE L'EDITOR
+    // ==========================================
+
+    updateSelectedTargetLabel(
+        selectedHand,
+        state
+    );
+
+
     renderConfiguration(
         config.hand[state]
     );
@@ -2043,18 +2099,23 @@ function renderConfiguration(
     config
 ) {
 
-    document
-        .querySelectorAll(
-            ".action-button"
-        )
-        .forEach(
-            button => {
-
-                button.classList.remove(
-                    "selected"
-                );
-            }
+    const actionSelect =
+        document.getElementById(
+            "action-select"
         );
+
+
+    if (actionSelect) {
+
+        actionSelect.value =
+            (
+                config &&
+                config !== "none" &&
+                typeof config === "object"
+            )
+                ? config.action
+                : "none";
+    }
 
 
     const valueArea =
@@ -2091,20 +2152,6 @@ function renderConfiguration(
 
     selectedAction =
         config.action;
-
-
-    const actionButton =
-        document.querySelector(
-            `[data-action="${selectedAction}"]`
-        );
-
-
-    if (actionButton) {
-
-        actionButton.classList.add(
-            "selected"
-        );
-    }
 
 
     if (!valueArea) {
@@ -2526,405 +2573,6 @@ function stopWholeHandVoice(
 
 
 // ================================================
-// ⚙️ CANVIAR MODE DE LA MÀ
-// ================================================
-
-function setHandMode(
-    hand,
-    mode
-) {
-
-    const config =
-        ensureHandConfig(
-            hand
-        );
-
-
-    stopHandVoices(
-        hand
-    );
-
-
-    handModes[hand] =
-        mode;
-
-    config.mode =
-        mode;
-
-
-    selectedHand =
-        hand;
-
-    selectedFinger =
-        null;
-
-
-    if (
-        mode ===
-        "fingers"
-    ) {
-
-        const handConfiguration =
-            document.getElementById(
-                `${hand}-hand-configuration`
-            );
-
-
-        const fingerMode =
-            document.getElementById(
-                `${hand}-finger-mode`
-            );
-
-
-        if (handConfiguration) {
-
-            handConfiguration.classList.add(
-                "hidden"
-            );
-        }
-
-
-        if (fingerMode) {
-
-            fingerMode.classList.remove(
-                "hidden"
-            );
-        }
-
-
-        updateFingerButtons(
-            hand
-        );
-
-
-        updateHandStateButtons(
-            hand
-        );
-
-
-        const selected =
-            document.getElementById(
-                "selected-finger"
-            );
-
-
-        if (selected) {
-
-            selected.textContent =
-                `${hand === "left" ? "👈" : "👉"} Selecciona un dit`;
-        }
-
-
-        const valueArea =
-            document.getElementById(
-                "value-area"
-            );
-
-
-        if (valueArea) {
-
-            valueArea.classList.add(
-                "hidden"
-            );
-
-            valueArea.innerHTML =
-                "";
-        }
-    }
-
-    else {
-
-        const handConfiguration =
-            document.getElementById(
-                `${hand}-hand-configuration`
-            );
-
-
-        const fingerMode =
-            document.getElementById(
-                `${hand}-finger-mode`
-            );
-
-
-        if (handConfiguration) {
-
-            handConfiguration.classList.remove(
-                "hidden"
-            );
-        }
-
-
-        if (fingerMode) {
-
-            fingerMode.classList.add(
-                "hidden"
-            );
-        }
-
-
-        updateFingerButtons(
-            hand
-        );
-
-
-        updateHandStateButtons(
-            hand
-        );
-
-
-        loadCurrentHandConfiguration();
-    }
-
-
-    updateCodePreview();
-}
-// ================================================
-// ⚙️ CONTROLS DE MODE DE LA MÀ
-// ================================================
-
-function setupHandModeControls() {
-
-    for (
-        const hand
-        of [
-            "left",
-            "right"
-        ]
-    ) {
-
-        const personalizeButton =
-            document.getElementById(
-                `personalize-${hand}`
-            );
-
-
-        if (
-            personalizeButton
-        ) {
-
-            personalizeButton.addEventListener(
-                "click",
-                () => {
-
-                    setHandMode(
-                        hand,
-                        "fingers"
-                    );
-                }
-            );
-        }
-
-
-        document
-            .querySelectorAll(
-                `.back-to-hand-button[data-hand="${hand}"]`
-            )
-            .forEach(
-                button => {
-
-                    button.addEventListener(
-                        "click",
-                        () => {
-
-                            setHandMode(
-                                hand,
-                                "hand"
-                            );
-                        }
-                    );
-                }
-            );
-
-
-        document
-            .querySelectorAll(
-                `.hand-mode-button[data-hand="${hand}"][data-state]`
-            )
-            .forEach(
-                button => {
-
-                    button.addEventListener(
-                        "click",
-                        () => {
-
-                            selectHandState(
-                                hand,
-                                button.dataset.state
-                            );
-                        }
-                    );
-                }
-            );
-    }
-}
-
-
-// ================================================
-// 👆 ACTIVAR / DESACTIVAR BOTONS DELS DITS
-// ================================================
-
-function updateFingerButtons(
-    hand
-) {
-
-    const enabled =
-        handModes[hand] ===
-        "fingers";
-
-
-    document
-        .querySelectorAll(
-            `.finger-button[data-hand="${hand}"]`
-        )
-        .forEach(
-            button => {
-
-                button.disabled =
-                    !enabled;
-
-
-                button.classList.toggle(
-                    "selected",
-
-                    enabled &&
-                    button.dataset.finger ===
-                        selectedFinger
-                );
-            }
-        );
-}
-
-
-// ================================================
-// 🖐️ ACTUALITZAR BOTONS MÀ SENCERA
-// ================================================
-
-function updateHandStateButtons(
-    hand
-) {
-
-    const enabled =
-        handModes[hand] ===
-        "hand";
-
-
-    document
-        .querySelectorAll(
-            `.hand-mode-button[data-hand="${hand}"][data-state]`
-        )
-        .forEach(
-            button => {
-
-                button.disabled =
-                    !enabled;
-
-
-                button.classList.toggle(
-                    "selected",
-
-                    enabled &&
-                    button.dataset.state ===
-                        selectedHandState[hand]
-                );
-            }
-        );
-}
-
-
-// ================================================
-// 👆 PREPARAR BOTONS DELS DITS
-// ================================================
-
-function setupFingerButtons() {
-
-    document
-        .querySelectorAll(
-            ".finger-button"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        if (
-                            button.disabled
-                        ) {
-                            return;
-                        }
-
-
-                        selectFinger(
-                            button.dataset.hand,
-                            button.dataset.finger
-                        );
-                    }
-                );
-            }
-        );
-}
-
-
-// ================================================
-// 🎛️ PREPARAR BOTONS D'ACCIÓ
-// ================================================
-
-function setupActionButtons() {
-
-    const allowedActions = [
-
-        "none",
-        "note",
-        "chord",
-        "drum"
-
-    ];
-
-
-    document
-        .querySelectorAll(
-            ".action-button"
-        )
-        .forEach(
-            button => {
-
-                const action =
-                    button.dataset.action;
-
-
-                // No afegim accions noves.
-                // Si l'HTML en conté alguna altra,
-                // queda amagada.
-
-                if (
-                    !allowedActions.includes(
-                        action
-                    )
-                ) {
-
-                    button.hidden =
-                        true;
-
-                    return;
-                }
-
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        chooseAction(
-                            action
-                        );
-                    }
-                );
-            }
-        );
-}
-
-
-// ================================================
 // 🎼 CANVIAR TONALITAT GLOBAL
 // ================================================
 
@@ -3133,19 +2781,6 @@ function changeScale(value) {
     }
 
 
-    const scaleSelect =
-        document.getElementById(
-            "global-scale-select"
-        );
-
-
-    if (scaleSelect) {
-
-        scaleSelect.value =
-            selectedScale;
-    }
-
-
     if (
         selectedHand
     ) {
@@ -3241,9 +2876,6 @@ function changeTempo(value) {
     }
 
 
-    // Si estem configurant bateria,
-    // actualitzem el text informatiu.
-
     if (
         selectedAction ===
         "drum"
@@ -3305,182 +2937,6 @@ function changeTempo(value) {
 }
 
 
-// ================================================
-// 🎼 PREPARAR TONALITAT
-// ================================================
-
-function setupGlobalScaleSelector() {
-
-    const select =
-        document.getElementById(
-            "global-scale-select"
-        );
-
-
-    if (!select) {
-        return;
-    }
-
-
-    select.innerHTML =
-        "";
-
-
-    const scales = [
-
-        {
-            value: "C major",
-            label: "Do major"
-        },
-
-        {
-            value: "G major",
-            label: "Sol major"
-        },
-
-        {
-            value: "D major",
-            label: "Re major"
-        },
-
-        {
-            value: "A major",
-            label: "La major"
-        },
-
-        {
-            value: "E major",
-            label: "Mi major"
-        },
-
-        {
-            value: "F major",
-            label: "Fa major"
-        },
-
-        {
-            value: "Bb major",
-            label: "Sib major"
-        },
-
-        {
-            value: "A minor",
-            label: "La menor"
-        },
-
-        {
-            value: "E minor",
-            label: "Mi menor"
-        },
-
-        {
-            value: "D minor",
-            label: "Re menor"
-        },
-
-        {
-            value: "G minor",
-            label: "Sol menor"
-        },
-
-        {
-            value: "C minor",
-            label: "Do menor"
-        },
-
-        {
-            value: "Lliure",
-            label: "🎨 Lliure — totes les notes"
-        }
-
-    ];
-
-
-    for (
-        const scale
-        of scales
-    ) {
-
-        const option =
-            document.createElement(
-                "option"
-            );
-
-
-        option.value =
-            scale.value;
-
-
-        option.textContent =
-            scale.label;
-
-
-        select.appendChild(
-            option
-        );
-    }
-
-
-    select.value =
-        selectedScale;
-
-
-    select.addEventListener(
-        "change",
-        () => {
-
-            changeScale(
-                select.value
-            );
-        }
-    );
-}
-
-
-// ================================================
-// 🥁 PREPARAR TEMPO
-// ================================================
-
-function setupGlobalTempoSelector() {
-
-    const input =
-        document.getElementById(
-            "tempo-select"
-        );
-
-
-    if (!input) {
-        return;
-    }
-
-
-    input.value =
-        selectedTempo;
-
-
-    const display =
-        document.getElementById(
-            "tempo-value"
-        );
-
-
-    if (display) {
-
-        display.textContent =
-            `${selectedTempo} BPM`;
-    }
-
-
-    input.addEventListener(
-        "input",
-        () => {
-
-            changeTempo(
-                input.value
-            );
-        }
-    );
-}
 // ================================================
 // 💻 PREVISUALITZACIÓ DEL CODI
 // ================================================
@@ -3801,177 +3257,7 @@ function loadSavedConfiguration() {
 
 
 // ================================================
-// 🖐️ PREPARAR INTERFÍCIE DE LES MANS
-// ================================================
-
-function setupInitialHandInterface() {
-
-    // IMPORTANT:
-    // El mode inicial sempre és "mà sencera".
-    //
-    // Això evita que l'alumne vegi tots els dits
-    // abans d'haver triat "Personalitza els dits".
-
-    handModes.left =
-        "hand";
-
-    handModes.right =
-        "hand";
-
-
-    instrumentConfig.leftHand.mode =
-        "hand";
-
-    instrumentConfig.rightHand.mode =
-        "hand";
-
-
-    selectedHand =
-        null;
-
-    selectedFinger =
-        null;
-
-
-    updateFingerButtons(
-        "left"
-    );
-
-    updateFingerButtons(
-        "right"
-    );
-
-
-    updateHandStateButtons(
-        "left"
-    );
-
-    updateHandStateButtons(
-        "right"
-    );
-}
-
-
-// ================================================
-// 🎨 ACTUALITZAR INTERFÍCIE SEGONS MODE
-// ================================================
-
-function refreshHandInterface(
-    hand
-) {
-
-    const mode =
-        handModes[hand];
-
-
-    const wholeHandArea =
-        document.getElementById(
-            `${hand}-hand-configuration`
-        );
-
-
-    const fingerArea =
-        document.getElementById(
-            `${hand}-finger-mode`
-        );
-
-
-    const personalizeButton =
-        document.getElementById(
-            `personalize-${hand}`
-        );
-
-
-    const backButton =
-        document.querySelector(
-            `.back-to-hand-button[data-hand="${hand}"]`
-        );
-
-
-    if (
-        mode ===
-        "fingers"
-    ) {
-
-        if (wholeHandArea) {
-
-            wholeHandArea.classList.add(
-                "hidden"
-            );
-        }
-
-
-        if (fingerArea) {
-
-            fingerArea.classList.remove(
-                "hidden"
-            );
-        }
-
-
-        if (personalizeButton) {
-
-            personalizeButton.classList.add(
-                "hidden"
-            );
-        }
-
-
-        if (backButton) {
-
-            backButton.classList.remove(
-                "hidden"
-            );
-        }
-
-    }
-    else {
-
-        if (wholeHandArea) {
-
-            wholeHandArea.classList.remove(
-                "hidden"
-            );
-        }
-
-
-        if (fingerArea) {
-
-            fingerArea.classList.add(
-                "hidden"
-            );
-        }
-
-
-        if (personalizeButton) {
-
-            personalizeButton.classList.remove(
-                "hidden"
-            );
-        }
-
-
-        if (backButton) {
-
-            backButton.classList.add(
-                "hidden"
-            );
-        }
-    }
-
-
-    updateFingerButtons(
-        hand
-    );
-
-    updateHandStateButtons(
-        hand
-    );
-}
-
-
-// ================================================
-// ⚙️ CANVIAR MODE
+// ⚙️ CANVIAR MODE DE LA MÀ
 // ================================================
 
 function changeHandMode(
@@ -4013,9 +3299,11 @@ function changeHandMode(
         null;
 
 
-    refreshHandInterface(
-        hand
-    );
+    refreshHandUI({
+        hand,
+        mode: handModes[hand],
+        selectedFinger
+    });
 
 
     const valueArea =
@@ -4039,6 +3327,21 @@ function changeHandMode(
         mode ===
         "hand"
     ) {
+
+        // ======================================
+        // 🖐️ TORNEM A MÀ SENCERA
+        // ======================================
+        //
+        // Actualitzem immediatament el text
+        // abans de carregar la configuració.
+        //
+        // ======================================
+
+        updateSelectedTargetLabel(
+            hand,
+            selectedHandState[hand]
+        );
+
 
         loadCurrentHandConfiguration();
 
@@ -4064,273 +3367,71 @@ function changeHandMode(
 
 
 // ================================================
-// ⚙️ PREPARAR BOTONS DE PERSONALITZACIÓ
+// 🎛️ PREPARAR DESPLEGABLE D'ACCIONS
 // ================================================
 
-function setupHandModeButtons() {
+function setupActionButtons() {
 
-    for (
-        const hand
-        of [
-            "left",
-            "right"
-        ]
-    ) {
-
-        const personalize =
-            document.getElementById(
-                `personalize-${hand}`
-            );
+    const actionSelect =
+        document.getElementById(
+            "action-select"
+        );
 
 
-        if (personalize) {
+    if (!actionSelect) {
+        return;
+    }
 
-            personalize.addEventListener(
-                "click",
-                () => {
 
-                    changeHandMode(
-                        hand,
-                        "fingers"
-                    );
+    const allowedActions = [
+
+        "none",
+        "note",
+        "chord",
+        "drum"
+
+    ];
+
+
+    // ==========================================
+    // 🧹 NETEJAR OPCIONS NO PERMESES
+    // ==========================================
+
+    Array.from(
+        actionSelect.options
+    )
+        .forEach(
+            option => {
+
+                if (
+                    !allowedActions.includes(
+                        option.value
+                    )
+                ) {
+
+                    option.remove();
                 }
+            }
+        );
+
+
+    // ==========================================
+    // 🎛️ CANVIAR ACCIÓ
+    // ==========================================
+
+    actionSelect.addEventListener(
+        "change",
+        () => {
+
+            chooseAction(
+                actionSelect.value
             );
+
         }
-
-
-        const backButtons =
-            document.querySelectorAll(
-                `.back-to-hand-button[data-hand="${hand}"]`
-            );
-
-
-        backButtons.forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        changeHandMode(
-                            hand,
-                            "hand"
-                        );
-                    }
-                );
-            }
-        );
-
-
-        const stateButtons =
-            document.querySelectorAll(
-                `.hand-mode-button[data-hand="${hand}"][data-state]`
-            );
-
-
-        stateButtons.forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        if (
-                            handModes[hand] !==
-                            "hand"
-                        ) {
-                            return;
-                        }
-
-
-                        selectHandState(
-                            hand,
-                            button.dataset.state
-                        );
-                    }
-                );
-            }
-        );
-    }
-}
-
-
-// ================================================
-// 👆 PREPARAR DITS
-// ================================================
-
-function setupFingerMode() {
-
-    document
-        .querySelectorAll(
-            ".finger-button"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        if (
-                            button.disabled
-                        ) {
-                            return;
-                        }
-
-
-                        selectFinger(
-                            button.dataset.hand,
-                            button.dataset.finger
-                        );
-                    }
-                );
-            }
-        );
-}
-
-
-// ================================================
-// 🎛️ ACTUALITZAR ESTAT DELS DITS
-// ================================================
-
-function updateFingerModeUI(
-    hand
-) {
-
-    const enabled =
-        handModes[hand] ===
-        "fingers";
-
-
-    document
-        .querySelectorAll(
-            `.finger-button[data-hand="${hand}"]`
-        )
-        .forEach(
-            button => {
-
-                button.disabled =
-                    !enabled;
-
-
-                if (!enabled) {
-
-                    button.classList.remove(
-                        "selected"
-                    );
-                }
-            }
-        );
-}
-
-
-// ================================================
-// 🖐️ ACTUALITZAR ESTAT DE MÀ
-// ================================================
-
-function updateWholeHandModeUI(
-    hand
-) {
-
-    const enabled =
-        handModes[hand] ===
-        "hand";
-
-
-    document
-        .querySelectorAll(
-            `.hand-mode-button[data-hand="${hand}"][data-state]`
-        )
-        .forEach(
-            button => {
-
-                button.disabled =
-                    !enabled;
-
-
-                button.classList.toggle(
-                    "selected",
-
-                    enabled &&
-                    button.dataset.state ===
-                        selectedHandState[hand]
-                );
-            }
-        );
-}
-
-
-// ================================================
-// 🔄 ACTUALITZAR TOTA LA UI
-// ================================================
-
-function updateHandUI(
-    hand
-) {
-
-    refreshHandInterface(
-        hand
-    );
-
-    updateFingerModeUI(
-        hand
-    );
-
-    updateWholeHandModeUI(
-        hand
     );
 }
 
 
-// ================================================
-// 🎼 ACTUALITZAR TONALITAT DESPRÉS DE CARREGAR
-// ================================================
-
-function refreshGlobalMusicUI() {
-
-    const scaleSelect =
-        document.getElementById(
-            "global-scale-select"
-        );
-
-
-    if (scaleSelect) {
-
-        scaleSelect.value =
-            selectedScale;
-    }
-
-
-    const tempoInput =
-        document.getElementById(
-            "tempo-select"
-        );
-
-
-    if (tempoInput) {
-
-        tempoInput.value =
-            selectedTempo;
-    }
-
-
-    const tempoValue =
-        document.getElementById(
-            "tempo-value"
-        );
-
-
-    if (tempoValue) {
-
-        tempoValue.textContent =
-            `${selectedTempo} BPM`;
-    }
-
-
-    setTempo(
-        selectedTempo
-    );
-}
 // ================================================
 // 🚀 PREPARAR TOTA LA INTERFÍCIE
 // ================================================
@@ -4344,27 +3445,109 @@ function refreshGlobalMusicUI() {
 
 loadSavedConfiguration();
 
-setupGlobalScaleSelector();
 
-setupGlobalTempoSelector();
+setupGlobalMusicUI({
+    selectedScale,
+    selectedTempo,
+    onScaleChange: changeScale,
+    onTempoChange: changeTempo
+});
 
-setupHandModeControls();
 
-setupFingerButtons();
+setupHandsUI({
+
+    getHandMode: (
+        hand
+    ) => {
+
+        return handModes[
+            hand
+        ];
+
+    },
+
+
+    getSelectedFinger: () => {
+
+        return selectedFinger;
+
+    },
+
+
+    onHandModeChange: (
+        hand,
+        mode
+    ) => {
+
+        changeHandMode(
+            hand,
+            mode
+        );
+
+    },
+
+
+    onFingerSelect: (
+        hand,
+        finger
+    ) => {
+
+        selectFinger(
+            hand,
+            finger
+        );
+
+    },
+
+
+    onHandStateSelect: (
+        hand,
+        state
+    ) => {
+
+        selectHandState(
+            hand,
+            state
+        );
+
+    }
+
+});
+
 
 setupActionButtons();
 
-setupInitialHandInterface();
 
-refreshGlobalMusicUI();
-
-updateHandUI(
-    "left"
+refreshGlobalMusicUI(
+    selectedScale,
+    selectedTempo
 );
 
-updateHandUI(
-    "right"
+
+// ================================================
+// 🏷️ ESTAT INICIAL DE L'EDITOR
+// ================================================
+//
+// Comencem en mode "Mà sencera", així que no
+// volem mostrar "Selecciona un dit" al carregar.
+// Mostrem directament l'estat inicial de la mà
+// seleccionada.
+//
+
+selectedHand =
+    "left";
+
+selectedFinger =
+    null;
+
+updateSelectedTargetLabel(
+    "left",
+    selectedHandState.left
 );
+
+
+loadCurrentHandConfiguration();
+
 
 updateCodePreview();
 
@@ -4646,9 +3829,11 @@ if (soundButton) {
 // 🚀 ARRANCAR EL TALLER
 // ================================================
 //
-// IMPORTANT:
-// Aquesta línia és la que posa en marxa
-// la càmera + MediaPipe + el bucle de detecció.
+// Aquesta línia posa en marxa:
+// 📷 càmera
+// 🖐️ MediaPipe
+// 🟢 detecció
+// 🎵 processament de les mans
 //
 
 startEkho();

@@ -521,69 +521,47 @@
 
         }
 
-        .action-grid {
 
-            display: flex;
+        /* =========================================
+           DESPLEGABLE D'ACCIONS
+           ========================================= */
 
-            gap: 10px;
+        #action-select {
 
-            flex-wrap: wrap;
+            width: 100%;
 
-        }
+            max-width: 520px;
 
-        .action-button {
+            padding:
+                13px
+                14px;
 
-            border: 1px solid #444;
-
-            background: #303030;
+            background: #292929;
 
             color: white;
 
-            border-radius: 10px;
+            border: 1px solid #555;
 
-            padding: 13px 18px;
+            border-radius: 9px;
+
+            font-size: 17px;
 
             cursor: pointer;
 
-            font-size: 15px;
-
-            transition:
-                background 0.15s ease,
-                transform 0.1s ease,
-                border-color 0.15s ease,
-                box-shadow 0.15s ease;
-
         }
 
-        .action-button:hover {
+        #action-select:focus {
 
-            background: #3c3c3c;
-
-            transform:
-                translateY(-1px);
-
-            border-color: #666;
-
-        }
-
-        .action-button.selected {
-
-            background:
-                rgba(
-                    139,
-                    92,
-                    246,
-                    0.16
-                );
+            outline: none;
 
             border-color:
                 #9b7cf6;
 
             box-shadow:
-                0 0 0 1px
+                0 0 0 2px
                 rgba(
-                    155,
-                    124,
+                    139,
+                    92,
                     246,
                     0.15
                 );
@@ -1438,7 +1416,7 @@
             <div id="editor">
 
                 <div id="selected-finger">
-                    ☝️ Selecciona un dit
+                    👈 🖐️ Mà oberta
                 </div>
 
 
@@ -1447,66 +1425,41 @@
                 </div>
 
 
-                <div class="action-grid">
+                <select
+                    id="action-select"
+                    aria-label="Què vols que faci?"
+                >
 
-                    <button
-                        class="action-button"
-                        data-action="none"
-                        type="button"
+                    <option
+                        value="none"
                     >
                         ⚪ No fa res
-                    </button>
+                    </option>
 
-
-                    <button
-                        class="action-button"
-                        data-action="note"
-                        type="button"
+                    <option
+                        value="note"
                     >
                         🎵 Nota
-                    </button>
+                    </option>
 
-
-                    <button
-                        class="action-button"
-                        data-action="chord"
-                        type="button"
+                    <option
+                        value="chord"
                     >
                         🎹 Acord
-                    </button>
+                    </option>
 
-
-                    <button
-                        class="action-button"
-                        data-action="drum"
-                        type="button"
+                    <option
+                        value="drum"
                     >
                         🥁 Bateria
-                    </button>
+                    </option>
 
-
-                    <button
-                        class="action-button"
-                        data-action="effect"
-                        type="button"
-                    >
-                        🎛️ Efecte
-                    </button>
-
-
-                    <button
-                        class="action-button"
-                        data-action="control"
-                        type="button"
-                    >
-                        🔊 Control
-                    </button>
-
-                </div>
+                </select>
 
 
                 <!-- =================================
-                     ÀREA DINÀMICA DE NOTA / ACORD
+                     ÀREA DINÀMICA DE NOTA / ACORD /
+                     BATERIA
                      ================================= -->
 
                 <div
@@ -1531,7 +1484,7 @@
                             Així està construït el teu instrument:
                         </div>
 
-                        <pre id="code-preview">Selecciona un dit per començar...</pre>
+                        <pre id="code-preview">Selecciona una mà o un dit per començar...</pre>
 
                     </div>
 
