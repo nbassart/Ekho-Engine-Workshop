@@ -25,8 +25,8 @@ import {
     playChord,
     stopChord,
     muteAllNotes,
-    addDrumTrack,
-    removeDrumTrack,
+    startDrumLoop,
+    stopDrumLoop,
     setTempo
 } from "./music/sound-engine.js";
 
@@ -83,11 +83,6 @@ let soundEnabled = false;
 // ================================================
 // 🖐️ MODE DE CONFIGURACIÓ DE CADA MÀ
 // ================================================
-//
-// Per defecte, primer configurem la mà sencera.
-// Els dits només s'activen quan l'alumne prem
-// "Personalitza els dits".
-//
 
 const handModes = {
     left: "hand",
@@ -320,6 +315,277 @@ function getAvailableNotes() {
 
 
 // ================================================
+// 🎹 UTILITATS D'ACORDS
+// ================================================
+
+// Treu l'octava del nom que es mostra a la interfície.
+//
+// Internament continuem treballant amb C3, D3, etc.
+// però visualment volem mostrar C, D, etc.
+
+function getChordDisplayRoot(
+    rootNote
+) {
+
+    if (
+        !rootNote ||
+        typeof rootNote !== "string"
+    ) {
+        return rootNote;
+    }
+
+    return rootNote.replace(
+        /-?\d+$/,
+        ""
+    );
+}
+
+
+// ================================================
+// 🎹 GRAUS ROMANS
+// ================================================
+
+const romanNumerals = [
+    "I",
+    "II",
+    "III",
+    "IV",
+    "V",
+    "VI",
+    "VII"
+];
+
+
+function getRomanNumeral(
+    degreeIndex,
+    chordType
+) {
+
+    let numeral =
+        romanNumerals[
+            degreeIndex
+        ];
+
+
+    if (
+        chordType === "minor" ||
+        chordType === "diminished"
+    ) {
+
+        numeral =
+            numeral.toLowerCase();
+    }
+
+
+    if (
+        chordType === "diminished"
+    ) {
+
+        numeral += "°";
+    }
+
+
+    return numeral;
+}
+
+
+// ================================================
+// 🎹 TIPUS D'ACORDS QUE VOLEM AL TALLER
+// ================================================
+//
+// Només mostrem:
+// - tríades
+// - sus4
+// - sèptimes
+//
+// No mostrem novenes.
+// Els acords només apareixen si TOTES les seves
+// notes formen part de la tonalitat.
+//
+
+const workshopChordTypes = [
+    "major",
+    "minor",
+    "diminished",
+    "sus4",
+    "dominant7",
+    "major7",
+    "minor7",
+    "halfDiminished7"
+];
+
+
+// ================================================
+// 🎹 ACORDS DIATÒNICS DISPONIBLES
+// ================================================
+//
+// En una tonalitat:
+//
+// I      [C] [Cmaj7] ...
+// ii     [Dm] [Dm7] ...
+// iii    [Em] [Em7] ...
+//
+// Cada acord és independent.
+//
+// No ens limitem a les 7 tríades:
+// també mostrem totes les variants del taller
+// que encaixen completament dins de la tonalitat.
+//
+
+function getDiatonicChords() {
+
+    const scale =
+        getScale(selectedScale);
+
+
+    if (
+        !Array.isArray(scale) ||
+        scale.length < 7
+    ) {
+        return [];
+    }
+
+
+    const scaleDegrees =
+        scale.slice(0, 7);
+
+
+    const scalePitchClasses =
+        new Set(
+            scaleDegrees.map(
+                note => {
+
+                    const midi =
+                        noteToMidi(
+                            `${note.note}3`
+                        );
+
+                    return midi % 12;
+                }
+            )
+        );
+
+
+    const chords = [];
+
+
+    for (
+        let degreeIndex = 0;
+        degreeIndex < 7;
+        degreeIndex++
+    ) {
+
+        const degree =
+            scaleDegrees[
+                degreeIndex
+            ];
+
+
+        const root =
+            `${degree.note}3`;
+
+
+        for (
+            const type
+            of workshopChordTypes
+        ) {
+
+            if (
+                !chordTypes[type]
+            ) {
+                continue;
+            }
+
+
+            if (
+                !chordFitsScaleWithPitchClasses(
+                    root,
+                    type,
+                    scalePitchClasses
+                )
+            ) {
+                continue;
+            }
+
+
+            chords.push({
+
+                root,
+
+                type,
+
+                degree:
+                    getRomanNumeral(
+                        degreeIndex,
+                        type
+                    ),
+
+                name:
+                    `${
+                        getRomanNumeral(
+                            degreeIndex,
+                            type
+                        )
+                    } — ${
+                        getChordDisplayRoot(
+                            root
+                        )
+                    }${
+                        chordTypes[type].symbol
+                    }`
+
+            });
+        }
+    }
+
+
+    return chords;
+}
+
+
+// ================================================
+// 🎹 COMPROVAR SI UN ACORD ENCAIXA
+// ================================================
+
+function chordFitsScaleWithPitchClasses(
+    rootNote,
+    chordType,
+    allowedPitchClasses
+) {
+
+    const chord =
+        chordTypes[chordType];
+
+    const rootMidi =
+        noteToMidi(rootNote);
+
+
+    if (
+        !chord ||
+        rootMidi === null
+    ) {
+        return false;
+    }
+
+
+    return chord.intervals.every(
+        interval => {
+
+            const pitchClass =
+                (
+                    rootMidi +
+                    interval
+                ) % 12;
+
+            return allowedPitchClasses.has(
+                pitchClass
+            );
+        }
+    );
+}
+
+
+// ================================================
 // 🎹 ACORD COMPATIBLE
 // ================================================
 
@@ -389,12 +655,29 @@ function chordFitsScale(
 
 function getAvailableChords() {
 
+    // ==========================================
+    // 🎼 TONALITAT
+    // ==========================================
+
+    if (
+        selectedScale !== "Lliure"
+    ) {
+
+        return getDiatonicChords();
+    }
+
+
+    // ==========================================
+    // 🎨 MODE LLIURE
+    // ==========================================
+
     const notes =
         getAvailableNotes();
 
     const chords = [];
 
     const roots = [];
+
 
     for (
         const note
@@ -428,6 +711,7 @@ function getAvailableChords() {
         }
     }
 
+
     for (
         const root
         of roots
@@ -435,26 +719,33 @@ function getAvailableChords() {
 
         for (
             const type
-            of Object.keys(chordTypes)
+            of workshopChordTypes
         ) {
 
             if (
-                chordFitsScale(
-                    root.note,
-                    type
-                )
+                !chordTypes[type]
             ) {
-
-                chords.push({
-                    root: root.note,
-                    type,
-                    name:
-                        root.note +
-                        chordTypes[type].symbol
-                });
+                continue;
             }
+
+
+            chords.push({
+
+                root:
+                    root.note,
+
+                type,
+
+                name:
+                    getChordDisplayRoot(
+                        root.note
+                    ) +
+                    chordTypes[type].symbol
+
+            });
         }
     }
+
 
     return chords;
 }
@@ -834,17 +1125,24 @@ function executeAction(
         action === "drum"
     ) {
 
+        const pattern =
+            drumPatterns[config.value];
+
+        if (!pattern) {
+            return;
+        }
+
         if (isActive) {
 
-            addDrumTrack(
+            startDrumLoop(
                 voiceId,
-                config.value || "kick"
+                pattern
             );
 
         }
         else {
 
-            removeDrumTrack(
+            stopDrumLoop(
                 voiceId
             );
         }
@@ -879,7 +1177,7 @@ function stopHandVoices(hand) {
 
         stopNote(voiceId);
         stopChord(voiceId);
-        removeDrumTrack(voiceId);
+        stopDrumLoop(voiceId);
 
         activeNotes[hand][finger] =
             false;
@@ -898,7 +1196,7 @@ function stopHandVoices(hand) {
 
         stopNote(voiceId);
         stopChord(voiceId);
-        removeDrumTrack(voiceId);
+        stopDrumLoop(voiceId);
     }
 
     activeHandStates[hand] =
@@ -979,9 +1277,16 @@ function executeWholeHandAction(
         config.action === "drum"
     ) {
 
-        addDrumTrack(
+        const pattern =
+            drumPatterns[config.value];
+
+        if (!pattern) {
+            return;
+        }
+
+        startDrumLoop(
             voiceId,
-            config.value || "kick"
+            pattern
         );
     }
 }
@@ -1089,7 +1394,7 @@ function processHand(
                     voiceId
                 );
 
-                removeDrumTrack(
+                stopDrumLoop(
                     voiceId
                 );
 
@@ -1136,7 +1441,7 @@ function processHand(
                 previousVoiceId
             );
 
-            removeDrumTrack(
+            stopDrumLoop(
                 previousVoiceId
             );
         }
@@ -1355,6 +1660,20 @@ function createNoteSelector(
 // ================================================
 // 🎹 CREAR SELECTOR D'ACORDS
 // ================================================
+//
+// En tonalitat:
+//
+// I       [ C ] [ Cmaj7 ]
+// ii      [ Dm ] [ Dm7 ]
+// iii     [ Em ] [ Em7 ]
+//
+// Cada botó és independent.
+//
+// En Lliure:
+//
+// [ C ] [ Cm ] [ C7 ] [ Cmaj7 ] ...
+//
+// ================================================
 
 function createChordSelector(
     currentRoot = null,
@@ -1401,107 +1720,395 @@ function createChordSelector(
     help.textContent =
         selectedScale === "Lliure"
             ? "🎨 Mode lliure: pots escollir qualsevol acord."
-            : `🎼 Acords compatibles amb ${selectedScale}`;
+            : `🎼 Acords de ${selectedScale} · només els que encaixen amb la tonalitat`;
 
     valueArea.appendChild(
         help
     );
 
 
-    const select =
-        document.createElement(
-            "select"
-        );
-
-    select.id =
-        "chord-select";
-
-
     const chords =
         getAvailableChords();
 
 
-    for (
-        const chord
-        of chords
+    // ==========================================
+    // 🎨 MODE LLIURE
+    // ==========================================
+
+    if (
+        selectedScale === "Lliure"
     ) {
 
-        const option =
+        const freeRow =
             document.createElement(
-                "option"
+                "div"
             );
 
-        option.value =
-            JSON.stringify({
-                root: chord.root,
-                type: chord.type
-            });
+        freeRow.style.display =
+            "flex";
 
-        option.textContent =
-            chord.name;
+        freeRow.style.flexWrap =
+            "wrap";
 
-        select.appendChild(
-            option
-        );
-    }
+        freeRow.style.gap =
+            "8px";
 
+        freeRow.style.alignItems =
+            "center";
 
-    let selectedIndex =
-        -1;
+        freeRow.style.marginTop =
+            "12px";
 
 
-    if (
-        currentRoot &&
-        currentType
-    ) {
+        for (
+            const chord
+            of chords
+        ) {
 
-        selectedIndex =
-            chords.findIndex(
-                chord =>
-                    chord.root ===
-                        currentRoot &&
-                    chord.type ===
-                        currentType
-            );
-    }
-
-
-    if (
-        selectedIndex >= 0
-    ) {
-
-        select.selectedIndex =
-            selectedIndex;
-
-    }
-    else if (
-        chords.length > 0
-    ) {
-
-        select.selectedIndex =
-            0;
-    }
-
-
-    select.addEventListener(
-        "change",
-        () => {
-
-            const value =
-                JSON.parse(
-                    select.value
+            const button =
+                createChordButton(
+                    chord,
+                    currentRoot,
+                    currentType
                 );
 
+            freeRow.appendChild(
+                button
+            );
+        }
+
+
+        valueArea.appendChild(
+            freeRow
+        );
+
+        return;
+    }
+
+
+    // ==========================================
+    // 🎼 TONALITAT
+    // ==========================================
+
+    for (
+        let degreeIndex = 0;
+        degreeIndex < 7;
+        degreeIndex++
+    ) {
+
+        const degreeChords =
+            chords.filter(
+                chord =>
+                    getChordDegreeIndex(
+                        chord
+                    ) === degreeIndex
+            );
+
+
+        if (
+            degreeChords.length === 0
+        ) {
+            continue;
+        }
+
+
+        const row =
+            document.createElement(
+                "div"
+            );
+
+        row.style.display =
+            "flex";
+
+        row.style.alignItems =
+            "center";
+
+        row.style.gap =
+            "8px";
+
+        row.style.marginTop =
+            "8px";
+
+        row.style.flexWrap =
+            "wrap";
+
+
+        const degreeLabel =
+            document.createElement(
+                "div"
+            );
+
+        degreeLabel.textContent =
+            getDegreeLabel(
+                degreeChords[0]
+            );
+
+        degreeLabel.style.width =
+            "48px";
+
+        degreeLabel.style.minWidth =
+            "48px";
+
+        degreeLabel.style.fontWeight =
+            "700";
+
+        degreeLabel.style.fontSize =
+            "1rem";
+
+        degreeLabel.style.textAlign =
+            "right";
+
+        degreeLabel.style.marginRight =
+            "4px";
+
+
+        row.appendChild(
+            degreeLabel
+        );
+
+
+        for (
+            const chord
+            of degreeChords
+        ) {
+
+            const button =
+                createChordButton(
+                    chord,
+                    currentRoot,
+                    currentType
+                );
+
+            row.appendChild(
+                button
+            );
+        }
+
+
+        valueArea.appendChild(
+            row
+        );
+    }
+}
+
+
+// ================================================
+// 🎹 CREAR BOTÓ D'ACORD
+// ================================================
+
+function createChordButton(
+    chord,
+    currentRoot,
+    currentType
+) {
+
+    const button =
+        document.createElement(
+            "button"
+        );
+
+
+    button.type =
+        "button";
+
+
+    button.textContent =
+        selectedScale === "Lliure"
+            ? chord.name
+            : getChordButtonName(chord);
+
+
+    button.style.border =
+        "1px solid #6f42c1";
+
+    button.style.borderRadius =
+        "8px";
+
+    button.style.padding =
+        "8px 14px";
+
+    button.style.fontSize =
+        "0.95rem";
+
+    button.style.cursor =
+        "pointer";
+
+    button.style.background =
+        "#211b2d";
+
+    button.style.color =
+        "#ffffff";
+
+    button.style.transition =
+        "all 0.15s ease";
+
+
+    const isSelected =
+        chord.root === currentRoot &&
+        chord.type === currentType;
+
+
+    if (
+        isSelected
+    ) {
+
+        button.style.background =
+            "#7c4dff";
+
+        button.style.borderColor =
+            "#9b78ff";
+
+    }
+
+
+    button.addEventListener(
+        "mouseenter",
+        () => {
+
+            if (
+                !(
+                    chord.root === currentRoot &&
+                    chord.type === currentType
+                )
+            ) {
+
+                button.style.background =
+                    "#302640";
+            }
+        }
+    );
+
+
+    button.addEventListener(
+        "mouseleave",
+        () => {
+
+            if (
+                !(
+                    chord.root === currentRoot &&
+                    chord.type === currentType
+                )
+            ) {
+
+                button.style.background =
+                    "#211b2d";
+            }
+        }
+    );
+
+
+    button.addEventListener(
+        "click",
+        () => {
+
             changeChord(
-                value.root,
-                value.type
+                chord.root,
+                chord.type
+            );
+
+            createChordSelector(
+                chord.root,
+                chord.type
             );
         }
     );
 
 
-    valueArea.appendChild(
-        select
+    return button;
+}
+
+
+// ================================================
+// 🎹 NOM VISIBLE DEL BOTÓ
+// ================================================
+//
+// El grau romà ja està a l'esquerra de la fila.
+// Per tant, dins del botó només mostrem:
+//
+// C
+// Cmaj7
+// Dm
+// Dm7
+//
+// etc.
+//
+// ================================================
+
+function getChordButtonName(
+    chord
+) {
+
+    return (
+        getChordDisplayRoot(
+            chord.root
+        ) +
+        (
+            chordTypes[chord.type]?.symbol ||
+            ""
+        )
+    );
+}
+
+
+// ================================================
+// 🎹 OBTENIR GRAU D'UN ACORD
+// ================================================
+
+function getChordDegreeIndex(
+    chord
+) {
+
+    const scale =
+        getScale(selectedScale);
+
+
+    if (
+        !Array.isArray(scale)
+    ) {
+        return -1;
+    }
+
+
+    const displayRoot =
+        getChordDisplayRoot(
+            chord.root
+        );
+
+
+    return scale
+        .slice(0, 7)
+        .findIndex(
+            degree =>
+                degree.note ===
+                displayRoot
+        );
+}
+
+
+// ================================================
+// 🎹 ETIQUETA DEL GRAU
+// ================================================
+
+function getDegreeLabel(
+    chord
+) {
+
+    const degreeIndex =
+        getChordDegreeIndex(
+            chord
+        );
+
+
+    if (
+        degreeIndex < 0
+    ) {
+        return "";
+    }
+
+
+    return getRomanNumeral(
+        degreeIndex,
+        chord.type
     );
 }
 
@@ -1536,7 +2143,7 @@ function createDrumSelector(
         "value-title";
 
     title.textContent =
-        "🥁 Tria un so";
+        "🥁 Tria un patró";
 
     valueArea.appendChild(
         title
@@ -1607,7 +2214,7 @@ function createDrumSelector(
     else {
 
         select.value =
-            "kick";
+            "basicElectro";
     }
 
 
@@ -1841,6 +2448,40 @@ function changeDrum(value) {
         value;
 
 
+    // Si el loop ja estava actiu, el reiniciem
+    // amb el nou patró com una única unitat.
+
+    const voiceId =
+        handModes[selectedHand] === "hand"
+            ? getWholeHandVoiceId(
+                selectedHand,
+                selectedHandState[selectedHand]
+            )
+            : getVoiceId(
+                selectedHand,
+                selectedFinger
+            );
+
+
+    const isCurrentlyActive =
+        handModes[selectedHand] === "hand"
+            ? activeHandStates[selectedHand] !== null
+            : activeNotes[selectedHand][selectedFinger];
+
+
+    if (isCurrentlyActive) {
+
+        stopDrumLoop(
+            voiceId
+        );
+
+        startDrumLoop(
+            voiceId,
+            drumPatterns[value]
+        );
+    }
+
+
     updateCodePreview();
 }
 
@@ -1978,14 +2619,6 @@ function selectHandState(
 // ================================================
 // 🏷️ ACTUALITZAR ELEMENT SELECCIONAT
 // ================================================
-//
-// Aquest és el canvi important:
-//
-// Quan tornem a "Mà sencera", l'editor deixa de
-// mostrar "Selecciona un dit" i passa a mostrar
-// directament l'estat actual de la mà.
-//
-// ================================================
 
 function updateSelectedTargetLabel(
     hand,
@@ -2074,10 +2707,6 @@ function loadCurrentHandConfiguration() {
             selectedHand
         ];
 
-
-    // ==========================================
-    // 🏷️ ACTUALITZAR TEXT DE L'EDITOR
-    // ==========================================
 
     updateSelectedTargetLabel(
         selectedHand,
@@ -2314,7 +2943,7 @@ function prepareActionConfig(
         ) {
 
             config.value =
-                "kick";
+                "basicElectro";
         }
     }
 }
@@ -2556,7 +3185,7 @@ function stopWholeHandVoice(
         voiceId
     );
 
-    removeDrumTrack(
+    stopDrumLoop(
         voiceId
     );
 
@@ -2602,10 +3231,6 @@ function changeScale(value) {
         const handConfig =
             hand;
 
-
-        // ==========================================
-        // 👆 CONFIGURACIÓ DELS DITS
-        // ==========================================
 
         if (
             handConfig.fingers
@@ -2693,10 +3318,6 @@ function changeScale(value) {
             }
         }
 
-
-        // ==========================================
-        // 🖐️ CONFIGURACIÓ DE LA MÀ
-        // ==========================================
 
         if (
             handConfig.hand
@@ -2927,7 +3548,7 @@ function changeTempo(value) {
 
             createDrumSelector(
                 config?.value ||
-                "kick"
+                "basicElectro"
             );
         }
     }
@@ -2935,8 +3556,6 @@ function changeTempo(value) {
 
     updateCodePreview();
 }
-
-
 // ================================================
 // 💻 PREVISUALITZACIÓ DEL CODI
 // ================================================
@@ -3328,15 +3947,6 @@ function changeHandMode(
         "hand"
     ) {
 
-        // ======================================
-        // 🖐️ TORNEM A MÀ SENCERA
-        // ======================================
-        //
-        // Actualitzem immediatament el text
-        // abans de carregar la configuració.
-        //
-        // ======================================
-
         updateSelectedTargetLabel(
             hand,
             selectedHandState[hand]
@@ -3393,10 +4003,6 @@ function setupActionButtons() {
     ];
 
 
-    // ==========================================
-    // 🧹 NETEJAR OPCIONS NO PERMESES
-    // ==========================================
-
     Array.from(
         actionSelect.options
     )
@@ -3415,10 +4021,6 @@ function setupActionButtons() {
         );
 
 
-    // ==========================================
-    // 🎛️ CANVIAR ACCIÓ
-    // ==========================================
-
     actionSelect.addEventListener(
         "change",
         () => {
@@ -3435,13 +4037,6 @@ function setupActionButtons() {
 // ================================================
 // 🚀 PREPARAR TOTA LA INTERFÍCIE
 // ================================================
-//
-// IMPORTANT:
-// Fem tota la inicialització una sola vegada.
-// La interfície comença en mode "mà sencera".
-// Els dits només apareixen quan es prem
-// "Personalitza els dits".
-//
 
 loadSavedConfiguration();
 
@@ -3528,26 +4123,350 @@ refreshGlobalMusicUI(
 // 🏷️ ESTAT INICIAL DE L'EDITOR
 // ================================================
 //
-// Comencem en mode "Mà sencera", així que no
-// volem mostrar "Selecciona un dit" al carregar.
-// Mostrem directament l'estat inicial de la mà
-// seleccionada.
+// IMPORTANT:
 //
+// No seleccionem cap mà en entrar.
+// No seleccionem cap dit.
+// No seleccionem cap estat.
+// No carreguem cap configuració musical
+// dins del panell.
+// Les zones interiors queden tancades.
+//
+// La configuració guardada continua existint
+// internament, però no es mostra ni s'executa
+// fins que l'usuari navega explícitament per la UI.
+// ================================================
 
 selectedHand =
-    "left";
+    null;
 
 selectedFinger =
     null;
 
-updateSelectedTargetLabel(
-    "left",
-    selectedHandState.left
-);
+selectedAction =
+    null;
 
 
-loadCurrentHandConfiguration();
+// ================================================
+// 🔽 TANCAR TOTES LES ZONES INTERIORS
+// ================================================
 
+function closeHandConfigurationAreas() {
+
+    for (
+        const hand
+        of ["left", "right"]
+    ) {
+
+        const wholeHandArea =
+            document.getElementById(
+                `${hand}-hand-configuration`
+            );
+
+
+        const fingerArea =
+            document.getElementById(
+                `${hand}-finger-mode`
+            );
+
+
+        if (wholeHandArea) {
+
+            wholeHandArea.classList.add(
+                "hidden"
+            );
+
+        }
+
+
+        if (fingerArea) {
+
+            fingerArea.classList.add(
+                "hidden"
+            );
+
+        }
+
+    }
+
+
+    const valueArea =
+        document.getElementById(
+            "value-area"
+        );
+
+
+    if (valueArea) {
+
+        valueArea.classList.add(
+            "hidden"
+        );
+
+        valueArea.innerHTML =
+            "";
+
+    }
+
+
+    const selected =
+        document.getElementById(
+            "selected-finger"
+        );
+
+
+    if (selected) {
+
+        selected.textContent =
+            "Selecciona una mà";
+
+    }
+
+
+    document
+        .querySelectorAll(
+            ".finger-button, .hand-mode-button"
+        )
+        .forEach(
+            button => {
+
+                button.classList.remove(
+                    "selected"
+                );
+
+            }
+        );
+
+}
+
+
+// ================================================
+// 🔽 NAVEGACIÓ DESPLEGABLE DE LES MANS
+// ================================================
+//
+// Aquest nivell permet entrar en:
+// - 🖐️ Mà sencera
+// - ⚙️ Personalitza els dits
+//
+// Quan el mode intern ja coincideix amb el botó,
+// hands-ui.js no fa cap canvi de mode.
+//
+// Per això aquest listener s'encarrega d'obrir
+// igualment el nivell següent.
+//
+// ================================================
+
+function setupHandNavigation() {
+
+    for (
+        const hand
+        of ["left", "right"]
+    ) {
+
+        const handButton =
+            document.getElementById(
+                `${hand}-hand-mode`
+            );
+
+
+        if (handButton) {
+
+            handButton.addEventListener(
+                "click",
+                () => {
+
+                    if (
+                        handModes[hand] !==
+                        "hand"
+                    ) {
+                        return;
+                    }
+
+
+                    selectedHand =
+                        hand;
+
+                    selectedFinger =
+                        null;
+
+                    selectedAction =
+                        null;
+
+
+                    const wholeHandArea =
+                        document.getElementById(
+                            `${hand}-hand-configuration`
+                        );
+
+
+                    const fingerArea =
+                        document.getElementById(
+                            `${hand}-finger-mode`
+                        );
+
+
+                    if (fingerArea) {
+
+                        fingerArea.classList.add(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    if (wholeHandArea) {
+
+                        wholeHandArea.classList.remove(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    const valueArea =
+                        document.getElementById(
+                            "value-area"
+                        );
+
+
+                    if (valueArea) {
+
+                        valueArea.classList.add(
+                            "hidden"
+                        );
+
+                        valueArea.innerHTML =
+                            "";
+
+                    }
+
+
+                    const selected =
+                        document.getElementById(
+                            "selected-finger"
+                        );
+
+
+                    if (selected) {
+
+                        selected.textContent =
+                            `${hand === "left" ? "👈" : "👉"} Selecciona mà oberta o tancada`;
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        const personalizeButton =
+            document.getElementById(
+                `personalize-${hand}`
+            );
+
+
+        if (personalizeButton) {
+
+            personalizeButton.addEventListener(
+                "click",
+                () => {
+
+                    if (
+                        handModes[hand] !==
+                        "fingers"
+                    ) {
+                        return;
+                    }
+
+
+                    selectedHand =
+                        hand;
+
+                    selectedFinger =
+                        null;
+
+                    selectedAction =
+                        null;
+
+
+                    const wholeHandArea =
+                        document.getElementById(
+                            `${hand}-hand-configuration`
+                        );
+
+
+                    const fingerArea =
+                        document.getElementById(
+                            `${hand}-finger-mode`
+                        );
+
+
+                    if (wholeHandArea) {
+
+                        wholeHandArea.classList.add(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    if (fingerArea) {
+
+                        fingerArea.classList.remove(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    const valueArea =
+                        document.getElementById(
+                            "value-area"
+                        );
+
+
+                    if (valueArea) {
+
+                        valueArea.classList.add(
+                            "hidden"
+                        );
+
+                        valueArea.innerHTML =
+                            "";
+
+                    }
+
+
+                    const selected =
+                        document.getElementById(
+                            "selected-finger"
+                        );
+
+
+                    if (selected) {
+
+                        selected.textContent =
+                            `${hand === "left" ? "👈" : "👉"} Selecciona un dit`;
+
+                    }
+
+                }
+            );
+
+        }
+
+    }
+
+}
+
+
+// ================================================
+// 🚀 INICIALITZAR NAVEGACIÓ
+// ================================================
+
+closeHandConfigurationAreas();
+
+setupHandNavigation();
 
 updateCodePreview();
 
@@ -3629,29 +4548,15 @@ async function startEkho() {
                 );
 
 
-            // =====================================
-            // 🟢 VISUALS MEDIAPIPE
-            // =====================================
-
             drawHands(
                 results
             );
 
 
-            // =====================================
-            // 🔇 SI EL SO ESTÀ DESACTIVAT
-            // CONTINUEM DETECTANT I DIBUIXANT
-            // LES MANS, PERÒ NO REPRODUÏM SO
-            // =====================================
-
             if (!soundEnabled) {
                 return;
             }
 
-
-            // =====================================
-            // 🖐️ DETECTAR LES DUES MANS
-            // =====================================
 
             const detected =
                 detectBothHands(
@@ -3669,19 +4574,11 @@ async function startEkho() {
             }
 
 
-            // =====================================
-            // 👈 PROCESSAR MÀ ESQUERRA
-            // =====================================
-
             processHand(
                 "left",
                 detected.left
             );
 
-
-            // =====================================
-            // 👉 PROCESSAR MÀ DRETA
-            // =====================================
 
             processHand(
                 "right",
@@ -3690,7 +4587,6 @@ async function startEkho() {
         }
 
 
-        // Comencem el bucle de vídeo
         frame();
 
     }
@@ -3751,9 +4647,6 @@ if (soundButton) {
                 status.textContent =
                     "🟢 So activat";
 
-
-                // Reiniciem l'estat de les veus
-                // perquè no quedin notes penjades.
 
                 for (
                     const hand
@@ -3828,13 +4721,6 @@ if (soundButton) {
 // ================================================
 // 🚀 ARRANCAR EL TALLER
 // ================================================
-//
-// Aquesta línia posa en marxa:
-// 📷 càmera
-// 🖐️ MediaPipe
-// 🟢 detecció
-// 🎵 processament de les mans
-//
 
 startEkho();
 

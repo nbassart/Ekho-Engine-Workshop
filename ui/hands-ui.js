@@ -94,14 +94,20 @@ export function setupHandsUI({
 // ⚙️ BOTONS DE MODE
 // ================================================
 //
-// Cada mà té dos botons que funcionen com un
-// selector:
+// Cada mà té dos botons:
 //
 // 🖐️ Mà sencera
 // ⚙️ Personalitza els dits
 //
-// Quan es prem un, es comunica el canvi a app.js.
-// La UI es refresca després amb refreshHandUI().
+// Aquests botons funcionen com a primer nivell
+// de navegació.
+//
+// IMPORTANT:
+// La selecció del mode NO ha d'obrir directament
+// cap configuració musical.
+//
+// La configuració interior només apareix quan
+// l'usuari entra explícitament en aquell mode.
 // ================================================
 
 function setupModeButtons({
@@ -255,6 +261,12 @@ function setupFingerButtons({
 // ================================================
 // 🖐️ BOTONS MÀ OBERTA / TANCADA
 // ================================================
+//
+// Aquests botons només són visibles quan:
+//
+// Mà → 🖐️ Mà sencera
+//
+// ================================================
 
 function setupHandStateButtons({
 
@@ -368,6 +380,17 @@ export function refreshHandUI({
     // ==========================================
     // 🖐️ MÀ SENCERA
     // ==========================================
+    //
+    // Quan entrem en mode mà sencera,
+    // mostrem NOMÉS les opcions:
+    //
+    // 🖐️ Mà oberta
+    // ✊ Mà tancada
+    //
+    // La configuració musical no es mostra aquí.
+    // Aquesta només apareix quan l'usuari selecciona
+    // explícitament un dels dos estats.
+    // ==========================================
 
     if (
         mode ===
@@ -396,6 +419,13 @@ export function refreshHandUI({
 
     // ==========================================
     // 👆 PERSONALITZA ELS DITS
+    // ==========================================
+    //
+    // Quan entrem en aquest mode, mostrem només
+    // la selecció dels cinc dits.
+    //
+    // La configuració musical apareix després
+    // de seleccionar un dit.
     // ==========================================
 
     else {

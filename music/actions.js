@@ -1,9 +1,8 @@
 // ================================================
-// 🎛️ ACCIONS DE L'INSTRUMENT
+// 🎵 ACCIONS
 // ================================================
 
 export const gestureActions = [
-
     {
         id: "none",
         name: "No fa res",
@@ -87,73 +86,322 @@ export const gestureActions = [
         name: "Desaccelerar",
         category: "control"
     }
-
 ];
 
 
 // ================================================
 // 🥁 PATRONS DE BATERIA
 // ================================================
+//
+// Cada patró és una unitat completa de bateria.
+//
+// 16 passos = 1 compàs en 4/4 amb subdivisions de
+// semicorxera.
+//
+// Tots els instruments comparteixen exactament
+// els mateixos 16 passos.
+// ================================================
 
 export const drumPatterns = {
 
-    kick: {
-        name: "Kick",
+    // --------------------------------------------
+    // 🟢 BASIC ELECTRO
+    // --------------------------------------------
+    //
+    // Patró senzill i estable.
+    // Ideal per començar.
+    //
+
+    basicElectro: {
+        name: "Basic Electro",
         emoji: "🥁",
-        pattern: [
+
+        kick: [
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0
+        ],
+
+        snare: [
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
+        ],
+
+        closedHat: [
+            1, 0, 1, 0,
+            1, 0, 1, 0,
             1, 0, 1, 0,
             1, 0, 1, 0
+        ],
+
+        clap: [
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
         ]
     },
 
-    snare: {
-        name: "Caixa",
-        emoji: "🥁",
-        pattern: [
-            0, 1, 0, 1,
-            0, 1, 0, 1
-        ]
-    },
 
-    closedHat: {
-        name: "Hi-hat",
-        emoji: "🎩",
-        pattern: [
+    // --------------------------------------------
+    // 🔵 FOUR ON THE FLOOR
+    // --------------------------------------------
+    //
+    // Més dance / house.
+    //
+
+    fourOnTheFloor: {
+        name: "Four on the Floor",
+        emoji: "💿",
+
+        kick: [
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0
+        ],
+
+        snare: [
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
+        ],
+
+        closedHat: [
+            1, 1, 1, 1,
+            1, 1, 1, 1,
             1, 1, 1, 1,
             1, 1, 1, 1
+        ],
+
+        clap: [
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
         ]
     },
 
-    clap: {
-        name: "Clap",
-        emoji: "👏",
-        pattern: [
+
+    // --------------------------------------------
+    // 🟣 ELECTRO GROOVE
+    // --------------------------------------------
+    //
+    // Més sincopat.
+    //
+
+    electroGroove: {
+        name: "Electro Groove",
+        emoji: "⚡",
+
+        kick: [
+            1, 0, 0, 1,
             0, 0, 1, 0,
+            1, 0, 0, 0,
+            0, 1, 0, 0
+        ],
+
+        snare: [
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
+        ],
+
+        closedHat: [
+            1, 0, 1, 1,
+            0, 1, 1, 0,
+            1, 0, 1, 1,
+            0, 1, 1, 0
+        ],
+
+        clap: [
+            0, 0, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 0,
             0, 0, 1, 0
         ]
-    }
+    },
 
+
+    // --------------------------------------------
+    // 🟠 BREAKBEAT
+    // --------------------------------------------
+    //
+    // Més mogut i amb sensació de break.
+    //
+
+    breakbeat: {
+        name: "Breakbeat",
+        emoji: "🔥",
+
+        kick: [
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            1, 0, 0, 1,
+            0, 1, 0, 0
+        ],
+
+        snare: [
+            0, 0, 1, 0,
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            1, 0, 0, 0
+        ],
+
+        closedHat: [
+            1, 1, 1, 1,
+            1, 1, 1, 1,
+            1, 1, 1, 1,
+            1, 1, 1, 1
+        ],
+
+        clap: [
+            0, 0, 1, 0,
+            0, 0, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 0
+        ]
+    },
+
+
+    // --------------------------------------------
+    // 🟡 MINIMAL
+    // --------------------------------------------
+    //
+    // Pocs elements i molt d'espai.
+    //
+
+    minimal: {
+        name: "Minimal",
+        emoji: "◼️",
+
+        kick: [
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 1,
+            0, 0, 0, 0
+        ],
+
+        snare: [
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
+        ],
+
+        closedHat: [
+            0, 0, 1, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 1, 0, 0
+        ],
+
+        clap: [
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
+        ]
+    },
+
+
+    // --------------------------------------------
+    // 🔴 TRAP / HALF-TIME
+    // --------------------------------------------
+    //
+    // Caixa a la tercera pulsació i hats més densos.
+    //
+
+    trap: {
+        name: "Trap / Half-time",
+        emoji: "🧊",
+
+        kick: [
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+            0, 0, 1, 0
+        ],
+
+        snare: [
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0
+        ],
+
+        closedHat: [
+            1, 0, 1, 1,
+            1, 1, 1, 0,
+            1, 0, 1, 1,
+            1, 1, 1, 1
+        ],
+
+        clap: [
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0
+        ]
+    },
+
+
+    // --------------------------------------------
+    // 🟢 DANCE
+    // --------------------------------------------
+    //
+    // Patró més ple i energètic.
+    //
+
+    dance: {
+        name: "Dance",
+        emoji: "💥",
+
+        kick: [
+            1, 0, 0, 0,
+            1, 0, 1, 0,
+            1, 0, 0, 0,
+            1, 0, 1, 0
+        ],
+
+        snare: [
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 0, 0
+        ],
+
+        closedHat: [
+            1, 1, 1, 1,
+            1, 1, 1, 1,
+            1, 1, 1, 1,
+            1, 1, 1, 1
+        ],
+
+        clap: [
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            1, 0, 1, 0
+        ]
+    }
 };
 
 
 // ================================================
-// 🎹 TIPUS D'ACORD
-// ================================================
-//
-// Els intervals estan expressats en semitons
-// respecte de la nota fonamental.
-//
-// 0  = fonamental
-// 3  = tercera menor
-// 4  = tercera major
-// 7  = cinquena justa
-// 10 = setena menor
-// 11 = setena major
-// 14 = novena
-//
+// 🎹 TIPUS D'ACORDS
 // ================================================
 
 export const chordTypes = {
+
+    // -----------------------------
+    // Tríades
+    // -----------------------------
 
     major: {
         name: "Major",
@@ -173,6 +421,17 @@ export const chordTypes = {
         intervals: [0, 5, 7]
     },
 
+    diminished: {
+        name: "Disminuït",
+        symbol: "dim",
+        intervals: [0, 3, 6]
+    },
+
+
+    // -----------------------------
+    // Sèptimes
+    // -----------------------------
+
     dominant7: {
         name: "7a dominant",
         symbol: "7",
@@ -191,11 +450,20 @@ export const chordTypes = {
         intervals: [0, 3, 7, 10]
     },
 
-    diminished: {
-        name: "Disminuït",
-        symbol: "dim",
-        intervals: [0, 3, 6]
+    halfDiminished7: {
+        name: "Menor 7 ♭5",
+        symbol: "m7♭5",
+        intervals: [0, 3, 6, 10]
     },
+
+
+    // -----------------------------
+    // Extensions
+    // -----------------------------
+    //
+    // Les mantenim disponibles al motor,
+    // però l'editor del taller no les mostra
+    // actualment.
 
     dominant9: {
         name: "9a dominant",
@@ -214,12 +482,11 @@ export const chordTypes = {
         symbol: "m9",
         intervals: [0, 3, 7, 10, 14]
     }
-
 };
 
 
 // ================================================
-// 🎚️ ACCIONS DE POSICIÓ
+// 📍 ACCIONS DE POSICIÓ
 // ================================================
 
 export const positionActions = [
@@ -271,7 +538,6 @@ export const positionActions = [
         name: "Altura / Pitch",
         category: "sound"
     }
-
 ];
 
 
@@ -301,5 +567,4 @@ export const axes = [
         description:
             "La velocitat o intensitat del moviment."
     }
-
 ];

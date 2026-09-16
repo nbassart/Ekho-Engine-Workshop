@@ -6,7 +6,7 @@ let audioContext = null;
 let masterGain = null;
 
 const activeVoices = new Map();
-const drumTracks = new Map();
+const drumLoops = new Map();
 
 // ================================================
 // 🥁 TEMPO GLOBAL
@@ -15,32 +15,7 @@ const drumTracks = new Map();
 let DRUM_BPM = 120;
 
 let STEP_DURATION =
-    60 / DRUM_BPM / 2;
-
-export function setTempo(bpm) {
-    const value = Number(bpm);
-
-    if (!Number.isFinite(value)) {
-        return;
-    }
-
-    DRUM_BPM =
-        Math.max(
-            40,
-            Math.min(
-                240,
-                value
-            )
-        );
-
-    STEP_DURATION =
-        60 / DRUM_BPM / 2;
-
-    if (audioContext) {
-        nextNoteTime =
-            audioContext.currentTime + 0.02;
-    }
-}
+    60 / DRUM_BPM / 4;
 
 // ================================================
 // 🎵 INICIAR SO
@@ -86,6 +61,37 @@ function ensureAudio() {
     }
 
     return audioContext;
+}
+
+// ================================================
+// 🎵 TEMPO
+// ================================================
+
+export function setTempo(bpm) {
+    const value = Number(bpm);
+
+    if (!Number.isFinite(value)) {
+        return;
+    }
+
+    DRUM_BPM =
+        Math.max(
+            40,
+            Math.min(
+                240,
+                value
+            )
+        );
+
+    // 16 passos per compàs de 4/4:
+    // cada pas és una semicorxera.
+    STEP_DURATION =
+        60 / DRUM_BPM / 4;
+
+    if (audioContext) {
+        nextNoteTime =
+            audioContext.currentTime + 0.02;
+    }
 }
 
 // ================================================
@@ -280,64 +286,110 @@ export function stopChord(id) {
 }
 
 // ================================================
-// 🥁 PATRONS
+// 🥁 LOOPS DE BATERIA
+// ================================================
+//
+// Cada entrada de drumLoops és un LOOP COMPLET.
+//
+// Exemple:
+//
+// startDrumLoop(
+//     "left-index",
+//     {
+//         kick: [...16 passos],
+//         snare: [...16 passos],
+//         closedHat: [...16 passos],
+//         clap: [...16 passos]
+//     }
+// );
+//
+// No existeixen pistes independents.
 // ================================================
 
-const drumPatterns = {
-    kick: {
-        pattern: [
-            1, 0, 1, 0,
-            1, 0, 1, 0
-        ]
-    },
-
-    snare: {
-        pattern: [
-            0, 1, 0, 1,
-            0, 1, 0, 1
-        ]
-    },
-
-    closedHat: {
-        pattern: [
-            1, 1, 1, 1,
-            1, 1, 1, 1
-        ]
-    },
-
-    clap: {
-        pattern: [
-            0, 0, 1, 0,
-            0, 0, 1, 0
-        ]
-    }
-};
-
-// ================================================
-// 🥁 TRACKS
-// ================================================
-
-export function addDrumTrack(
+export function startDrumLoop(
     id,
-    drumType
+    pattern
 ) {
     ensureAudio();
 
     if (
-        !drumPatterns[drumType]
+        !pattern ||
+        !Array.isArray(pattern.kick) ||
+        !Array.isArray(pattern.snare) ||
+        !Array.isArray(pattern.closedHat) ||
+        !Array.isArray(pattern.clap)
     ) {
         return;
     }
 
-    drumTracks.set(
+    // Normalitzem sempre a 16 passos.
+    const normalizedPattern = {
+        kick: normalizePattern(
+            pattern.kick
+        ),
+
+        snare: normalizePattern(
+            pattern.snare
+        ),
+
+        closedHat: normalizePattern(
+            pattern.closedHat
+        ),
+
+        clap: normalizePattern(
+            pattern.clap
+        )
+    };
+
+    // Si aquest id ja tenia un loop,
+    // simplement el substituïm.
+    //
+    // Això evita que es puguin acumular
+    // diversos loops del mateix dit.
+    drumLoops.set(
         id,
-        drumType
+        normalizedPattern
     );
 }
 
-export function removeDrumTrack(id) {
-    drumTracks.delete(id);
+
+// ================================================
+// 🛑 ATURAR LOOP DE BATERIA
+// ================================================
+
+export function stopDrumLoop(id) {
+    drumLoops.delete(id);
 }
+
+
+// ================================================
+// 🔢 NORMALITZAR PATRÓ
+// ================================================
+
+function normalizePattern(
+    pattern
+) {
+    const result =
+        new Array(16).fill(0);
+
+    if (!Array.isArray(pattern)) {
+        return result;
+    }
+
+    for (
+        let i = 0;
+        i < 16;
+        i++
+    ) {
+        result[i] =
+            pattern[i] === 1
+                ? 1
+                : 0;
+    }
+
+    return result;
+}
+
 
 // ================================================
 // 🥁 SCHEDULER
@@ -350,6 +402,11 @@ let schedulerInterval = null;
 const LOOKAHEAD = 0.10;
 const SCHEDULE_INTERVAL = 25;
 
+
+// ================================================
+// ▶️ INICIAR SCHEDULER
+// ================================================
+
 function startDrumScheduler() {
     if (schedulerInterval) {
         return;
@@ -358,12 +415,19 @@ function startDrumScheduler() {
     nextNoteTime =
         audioContext.currentTime + 0.05;
 
+    currentStep = 0;
+
     schedulerInterval =
         setInterval(
             scheduler,
             SCHEDULE_INTERVAL
         );
 }
+
+
+// ================================================
+// ⏱️ SCHEDULER
+// ================================================
 
 function scheduler() {
     if (!audioContext) {
@@ -384,76 +448,68 @@ function scheduler() {
             STEP_DURATION;
 
         currentStep =
-            (currentStep + 1) % 8;
+            (currentStep + 1) % 16;
     }
 }
+
+
+// ================================================
+// 🥁 PROGRAMAR PAS
+// ================================================
 
 function scheduleStep(
     step,
     time
 ) {
-    for (
-        const drumType
-        of drumTracks.values()
-    ) {
-        const drum =
-            drumPatterns[
-                drumType
-            ];
+    // IMPORTANT:
+    //
+    // En cada pas recorrem els LOOPS actius.
+    //
+    // Cada loop conté tots els instruments.
+    // Per tant kick + snare + hat + clap
+    // comparteixen exactament el mateix
+    // "step" i el mateix "time".
 
-        if (!drum) {
-            continue;
+    for (
+        const pattern
+        of drumLoops.values()
+    ) {
+        if (
+            pattern.kick[step] === 1
+        ) {
+            scheduleKick(time);
         }
 
         if (
-            drum.pattern[step] === 1
+            pattern.snare[step] === 1
         ) {
-            scheduleDrumHit(
-                drumType,
-                time
-            );
+            scheduleSnare(time);
+        }
+
+        if (
+            pattern.closedHat[step] === 1
+        ) {
+            scheduleClosedHat(time);
+        }
+
+        if (
+            pattern.clap[step] === 1
+        ) {
+            scheduleClap(time);
         }
     }
 }
 
-// ================================================
-// 🥁 SOUNDS DE BATERIA
-// ================================================
-
-function scheduleDrumHit(
-    type,
-    time
-) {
-    if (!audioContext) {
-        return;
-    }
-
-    if (type === "kick") {
-        scheduleKick(time);
-        return;
-    }
-
-    if (type === "snare") {
-        scheduleSnare(time);
-        return;
-    }
-
-    if (type === "closedHat") {
-        scheduleClosedHat(time);
-        return;
-    }
-
-    if (type === "clap") {
-        scheduleClap(time);
-        return;
-    }
-}
 
 // ================================================
 // 🥁 KICK
 // ================================================
 
 function scheduleKick(time) {
+    if (!audioContext) {
+        return;
+    }
+
     const oscillator =
         audioContext.createOscillator();
 
@@ -486,23 +542,30 @@ function scheduleKick(time) {
     gain.connect(masterGain);
 
     oscillator.start(time);
+
     oscillator.stop(
         time + 0.16
     );
 }
+
 
 // ================================================
 // 🥁 SNARE
 // ================================================
 
 function scheduleSnare(time) {
+    if (!audioContext) {
+        return;
+    }
+
     const oscillator =
         audioContext.createOscillator();
 
     const gain =
         audioContext.createGain();
 
-    oscillator.type = "triangle";
+    oscillator.type =
+        "triangle";
 
     oscillator.frequency.value =
         180;
@@ -518,16 +581,24 @@ function scheduleSnare(time) {
     );
 
     oscillator.connect(gain);
+
     gain.connect(masterGain);
 
     oscillator.start(time);
+
     oscillator.stop(
         time + 0.13
     );
 
+    // ----------------------------
+    // Soroll de la caixa
+    // ----------------------------
+
     const bufferSize =
-        audioContext.sampleRate *
-        0.12;
+        Math.floor(
+            audioContext.sampleRate *
+            0.12
+        );
 
     const buffer =
         audioContext.createBuffer(
@@ -576,19 +647,27 @@ function scheduleSnare(time) {
     );
 
     noise.start(time);
+
     noise.stop(
         time + 0.13
     );
 }
+
 
 // ================================================
 // 🎩 HI-HAT
 // ================================================
 
 function scheduleClosedHat(time) {
+    if (!audioContext) {
+        return;
+    }
+
     const bufferSize =
-        audioContext.sampleRate *
-        0.05;
+        Math.floor(
+            audioContext.sampleRate *
+            0.05
+        );
 
     const buffer =
         audioContext.createBuffer(
@@ -629,21 +708,31 @@ function scheduleClosedHat(time) {
     );
 
     noise.connect(gain);
+
     gain.connect(masterGain);
 
     noise.start(time);
+
     noise.stop(
         time + 0.055
     );
 }
+
+
 // ================================================
 // 👏 CLAP
 // ================================================
 
 function scheduleClap(time) {
+    if (!audioContext) {
+        return;
+    }
+
     const bufferSize =
-        audioContext.sampleRate *
-        0.12;
+        Math.floor(
+            audioContext.sampleRate *
+            0.12
+        );
 
     const buffer =
         audioContext.createBuffer(
@@ -684,24 +773,32 @@ function scheduleClap(time) {
     );
 
     noise.connect(gain);
+
     gain.connect(masterGain);
 
     noise.start(time);
+
     noise.stop(
         time + 0.125
     );
 }
+
 
 // ================================================
 // 🔇 SILENCIAR TOT
 // ================================================
 
 export function muteAllNotes() {
-    // Aturar notes i acords
+
+    // ----------------------------
+    // Notes i acords
+    // ----------------------------
+
     for (
         const [id, voice]
         of activeVoices.entries()
     ) {
+
         if (
             voice.type === "note"
         ) {
@@ -755,13 +852,31 @@ export function muteAllNotes() {
 
     activeVoices.clear();
 
-    // Aturar totes les pistes de bateria
-    drumTracks.clear();
+
+    // ----------------------------
+    // Bateria
+    // ----------------------------
+    //
+    // Important:
+    // no intentem apagar instruments
+    // individualment.
+    //
+    // Simplement eliminem tots els
+    // loops actius.
+    //
+
+    drumLoops.clear();
+
+
+    // ----------------------------
+    // Master
+    // ----------------------------
 
     if (masterGain) {
         masterGain.gain.value = 0;
     }
 }
+
 
 // ================================================
 // 🔊 TORNAR A ACTIVAR EL MASTER
@@ -784,6 +899,7 @@ export function restoreSound() {
         masterGain.gain.value = 1;
     }
 }
+
 
 // ================================================
 // 🎵 CANVI DE VOLUM MASTER
@@ -816,6 +932,7 @@ export function setMasterVolume(
     masterGain.gain.value =
         volume;
 }
+
 
 // ================================================
 // 🛑 ATURAR MOTOR
