@@ -12,6 +12,8 @@
 // - 🖐️ Mà oberta / ✊ mà tancada
 // - mostrar / amagar les diferents zones
 // - estat visual dels botons
+// - 🟣 mà activa / mà seleccionada
+// - 👁️ mostrar / amagar l'editor
 //
 // La lògica musical i l'estat real de l'instrument
 // continuen a app.js.
@@ -42,6 +44,368 @@ const fingers = [
 
 
 // ================================================
+// 🎨 ESTILS VISUALS
+// ================================================
+
+function installActiveHandStyles() {
+
+    if (
+        document.getElementById(
+            "ekho-active-hand-styles"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const style =
+        document.createElement(
+            "style"
+        );
+
+
+    style.id =
+        "ekho-active-hand-styles";
+
+
+    style.textContent = `
+
+        /* ==========================================
+           🟣 MÀ ACTIVA
+           ========================================== */
+
+        .hand-card.ekho-active-hand {
+
+            border-color:
+                #a855f7 !important;
+
+            background-color:
+                rgba(168, 85, 247, 0.10) !important;
+
+            box-shadow:
+                0 0 0 2px rgba(168, 85, 247, 0.18),
+                0 0 18px rgba(168, 85, 247, 0.10);
+
+            transition:
+                border-color 0.18s ease,
+                background-color 0.18s ease,
+                box-shadow 0.18s ease;
+        }
+
+
+        .hand-card.ekho-active-hand
+        .hand-title {
+
+            color:
+                #a855f7 !important;
+        }
+
+
+        /* ==========================================
+           👁️ EDITOR OCULT
+           ========================================== */
+
+        #editor.ekho-editor-hidden {
+
+            display:
+                none !important;
+        }
+
+    `;
+
+
+    document.head.appendChild(
+        style
+    );
+
+}
+
+
+// ================================================
+// 🔎 TROBAR EL RECUADRE COMPLET DE LA MÀ
+// ================================================
+
+function findHandContainer(hand) {
+
+    const handButton =
+        document.getElementById(
+            `${hand}-hand-mode`
+        );
+
+
+    if (!handButton) {
+
+        return null;
+
+    }
+
+
+    const handCard =
+        handButton.closest(
+            ".hand-card"
+        );
+
+
+    return handCard || null;
+
+}
+
+
+// ================================================
+// 🟣 ACTUALITZAR MÀ ACTIVA
+// ================================================
+
+function updateActiveHandUI(
+    activeHand
+) {
+
+    installActiveHandStyles();
+
+
+    for (
+        const hand
+        of hands
+    ) {
+
+        const container =
+            findHandContainer(
+                hand
+            );
+
+
+        if (!container) {
+
+            continue;
+
+        }
+
+
+        container.classList.toggle(
+            "ekho-active-hand",
+            hand === activeHand
+        );
+
+    }
+
+}
+
+
+// ================================================
+// 👁️ EDITOR
+// ================================================
+
+function getEditor() {
+
+    return document.getElementById(
+        "editor"
+    );
+
+}
+
+
+// ================================================
+// 👁️ AMAGAR EDITOR
+// ================================================
+
+function hideEditor() {
+
+    installActiveHandStyles();
+
+
+    const editor =
+        getEditor();
+
+
+    if (!editor) {
+
+        return;
+
+    }
+
+
+    editor.classList.add(
+        "ekho-editor-hidden"
+    );
+
+}
+
+
+// ================================================
+// 👁️ MOSTRAR EDITOR
+// ================================================
+
+function showEditor() {
+
+    installActiveHandStyles();
+
+
+    const editor =
+        getEditor();
+
+
+    if (!editor) {
+
+        return;
+
+    }
+
+
+    editor.classList.remove(
+        "ekho-editor-hidden"
+    );
+
+}
+
+
+// ================================================
+// 🧹 PLEGAR COMPLETAMENT UNA MÀ
+// ================================================
+//
+// IMPORTANT:
+//
+// Aquí NO canviem el mode ni la configuració.
+// Només tanquem visualment tots els nivells
+// desplegables d'aquesta mà.
+//
+// ================================================
+
+function collapseHandUI(
+    hand
+) {
+
+    const wholeHandArea =
+        document.getElementById(
+            `${hand}-hand-configuration`
+        );
+
+
+    const fingerArea =
+        document.getElementById(
+            `${hand}-finger-mode`
+        );
+
+
+    if (wholeHandArea) {
+
+        wholeHandArea.classList.add(
+            "hidden"
+        );
+
+    }
+
+
+    if (fingerArea) {
+
+        fingerArea.classList.add(
+            "hidden"
+        );
+
+    }
+
+}
+
+
+// ================================================
+// 🧹 PLEGAR TOTES LES ALTRES MANS
+// ================================================
+
+function collapseOtherHands(
+    activeHand
+) {
+
+    for (
+        const hand
+        of hands
+    ) {
+
+        if (
+            hand ===
+            activeHand
+        ) {
+
+            continue;
+
+        }
+
+
+        collapseHandUI(
+            hand
+        );
+
+    }
+
+}
+
+
+// ================================================
+// 🧹 NETEJAR ZONA DE CONFIGURACIÓ MUSICAL
+// ================================================
+//
+// Aquesta zona és compartida per les dues mans.
+// Quan canviem de mà, no volem que quedi visible
+// la configuració musical de l'anterior.
+//
+// IMPORTANT:
+// Això NO modifica la configuració guardada.
+// Només neteja la interfície visible.
+//
+// ================================================
+
+function hideValueArea() {
+
+    const valueArea =
+        document.getElementById(
+            "value-area"
+        );
+
+
+    if (!valueArea) {
+
+        return;
+
+    }
+
+
+    valueArea.classList.add(
+        "hidden"
+    );
+
+
+    valueArea.innerHTML =
+        "";
+
+}
+
+
+// ================================================
+// 👁️ SELECCIÓ VISUAL D'UNA MÀ
+// ================================================
+
+function selectHandVisual(
+    hand
+) {
+
+    updateActiveHandUI(
+        hand
+    );
+
+
+    collapseOtherHands(
+        hand
+    );
+
+
+    hideValueArea();
+
+
+    showEditor();
+
+}
+
+
+// ================================================
 // 🖐️ INICIALITZAR UI DE LES MANS
 // ================================================
 
@@ -55,6 +419,44 @@ export function setupHandsUI({
     onHandStateSelect
 
 }) {
+
+    installActiveHandStyles();
+
+
+    // ==========================================
+    // 👁️ INICI
+    // ==========================================
+    //
+    // No hi ha cap mà seleccionada.
+    //
+    // ==========================================
+
+    hideEditor();
+
+
+    updateActiveHandUI(
+        null
+    );
+
+
+    // ==========================================
+    // 🧹 TANCAR TOTES LES ÀREES
+    // ==========================================
+
+    for (
+        const hand
+        of hands
+    ) {
+
+        collapseHandUI(
+            hand
+        );
+
+    }
+
+
+    hideValueArea();
+
 
     setupModeButtons({
 
@@ -80,6 +482,13 @@ export function setupHandsUI({
     });
 
 
+    setupHandCardClickNavigation({
+
+        getHandMode
+
+    });
+
+
     refreshAllHandsUI({
 
         getHandMode,
@@ -91,23 +500,142 @@ export function setupHandsUI({
 
 
 // ================================================
-// ⚙️ BOTONS DE MODE
+// 🖱️ CLICAR A QUALSEVOL LLOC DE LA MÀ
 // ================================================
 //
-// Cada mà té dos botons:
+// Si l'usuari clica sobre una zona buida del
+// .hand-card, interpretem que vol seleccionar
+// aquella mà.
 //
-// 🖐️ Mà sencera
-// ⚙️ Personalitza els dits
+// Si la mà està en mode:
 //
-// Aquests botons funcionen com a primer nivell
-// de navegació.
+// "hand"    → obrim Mà sencera
+// "fingers" → obrim Personalitza els dits
 //
-// IMPORTANT:
-// La selecció del mode NO ha d'obrir directament
-// cap configuració musical.
+// Si clica directament sobre un botó interior,
+// deixem que el seu propi listener gestioni
+// l'acció i no fem res aquí.
 //
-// La configuració interior només apareix quan
-// l'usuari entra explícitament en aquell mode.
+// ================================================
+
+function setupHandCardClickNavigation({
+
+    getHandMode
+
+}) {
+
+    for (
+        const hand
+        of hands
+    ) {
+
+        const card =
+            findHandContainer(
+                hand
+            );
+
+
+        if (!card) {
+
+            continue;
+
+        }
+
+
+        card.addEventListener(
+            "click",
+            event => {
+
+                // ==================================
+                // 🚫 NO INTERCEPTAR BOTONS
+                // ==================================
+
+                const clickedButton =
+                    event.target.closest(
+                        "button"
+                    );
+
+
+                if (
+                    clickedButton &&
+                    card.contains(
+                        clickedButton
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                // ==================================
+                // 🟣 SELECCIONAR AQUESTA MÀ
+                // ==================================
+
+                selectHandVisual(
+                    hand
+                );
+
+
+                // ==================================
+                // 📂 OBRIR EL NIVELL ACTUAL
+                // ==================================
+
+                const mode =
+                    getHandMode(
+                        hand
+                    );
+
+
+                if (
+                    mode ===
+                    "hand"
+                ) {
+
+                    const button =
+                        document.getElementById(
+                            `${hand}-hand-mode`
+                        );
+
+
+                    if (button) {
+
+                        button.click();
+
+                    }
+
+                }
+
+
+                else if (
+                    mode ===
+                    "fingers"
+                ) {
+
+                    const button =
+                        document.getElementById(
+                            `personalize-${hand}`
+                        );
+
+
+                    if (button) {
+
+                        button.click();
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+}
+
+
+// ================================================
+// ⚙️ BOTONS DE MODE
 // ================================================
 
 function setupModeButtons({
@@ -138,11 +666,60 @@ function setupModeButtons({
                 "click",
                 () => {
 
+                    // ==================================
+                    // 🟣 AQUESTA ÉS LA MÀ ACTIVA
+                    // ==================================
+
+                    selectHandVisual(
+                        hand
+                    );
+
+
+                    // ==================================
+                    // 📂 MOSTRAR MÀ SENCERA
+                    // ==================================
+
+                    const wholeHandArea =
+                        document.getElementById(
+                            `${hand}-hand-configuration`
+                        );
+
+
+                    const fingerArea =
+                        document.getElementById(
+                            `${hand}-finger-mode`
+                        );
+
+
+                    if (wholeHandArea) {
+
+                        wholeHandArea.classList.remove(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    if (fingerArea) {
+
+                        fingerArea.classList.add(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    // ==================================
+                    // 🔄 CANVI DE MODE NOMÉS SI CAL
+                    // ==================================
+
                     if (
                         getHandMode(hand) ===
                         "hand"
                     ) {
+
                         return;
+
                     }
 
 
@@ -173,11 +750,60 @@ function setupModeButtons({
                 "click",
                 () => {
 
+                    // ==================================
+                    // 🟣 AQUESTA ÉS LA MÀ ACTIVA
+                    // ==================================
+
+                    selectHandVisual(
+                        hand
+                    );
+
+
+                    // ==================================
+                    // 📂 MOSTRAR DITS
+                    // ==================================
+
+                    const wholeHandArea =
+                        document.getElementById(
+                            `${hand}-hand-configuration`
+                        );
+
+
+                    const fingerArea =
+                        document.getElementById(
+                            `${hand}-finger-mode`
+                        );
+
+
+                    if (wholeHandArea) {
+
+                        wholeHandArea.classList.add(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    if (fingerArea) {
+
+                        fingerArea.classList.remove(
+                            "hidden"
+                        );
+
+                    }
+
+
+                    // ==================================
+                    // 🔄 CANVI DE MODE NOMÉS SI CAL
+                    // ==================================
+
                     if (
                         getHandMode(hand) ===
                         "fingers"
                     ) {
+
                         return;
+
                     }
 
 
@@ -244,6 +870,11 @@ function setupFingerButtons({
                         }
 
 
+                        selectHandVisual(
+                            hand
+                        );
+
+
                         onFingerSelect(
                             hand,
                             finger
@@ -260,12 +891,6 @@ function setupFingerButtons({
 
 // ================================================
 // 🖐️ BOTONS MÀ OBERTA / TANCADA
-// ================================================
-//
-// Aquests botons només són visibles quan:
-//
-// Mà → 🖐️ Mà sencera
-//
 // ================================================
 
 function setupHandStateButtons({
@@ -299,6 +924,11 @@ function setupHandStateButtons({
                                 return;
 
                             }
+
+
+                            selectHandVisual(
+                                hand
+                            );
 
 
                             onHandStateSelect(
@@ -380,17 +1010,6 @@ export function refreshHandUI({
     // ==========================================
     // 🖐️ MÀ SENCERA
     // ==========================================
-    //
-    // Quan entrem en mode mà sencera,
-    // mostrem NOMÉS les opcions:
-    //
-    // 🖐️ Mà oberta
-    // ✊ Mà tancada
-    //
-    // La configuració musical no es mostra aquí.
-    // Aquesta només apareix quan l'usuari selecciona
-    // explícitament un dels dos estats.
-    // ==========================================
 
     if (
         mode ===
@@ -419,13 +1038,6 @@ export function refreshHandUI({
 
     // ==========================================
     // 👆 PERSONALITZA ELS DITS
-    // ==========================================
-    //
-    // Quan entrem en aquest mode, mostrem només
-    // la selecció dels cinc dits.
-    //
-    // La configuració musical apareix després
-    // de seleccionar un dit.
     // ==========================================
 
     else {
@@ -583,5 +1195,14 @@ function refreshAllHandsUI({
         });
 
     }
+
+
+    // ==========================================
+    // 🟣 CAP MÀ ACTIVA A L'INICI
+    // ==========================================
+
+    updateActiveHandUI(
+        null
+    );
 
 }
