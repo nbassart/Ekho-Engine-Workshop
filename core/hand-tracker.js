@@ -7,7 +7,7 @@ import {
 export async function createHandTracker() {
 
     const vision = await FilesetResolver.forVisionTasks(
-        "/wasm"
+        "/Ekho-Engine-Workshop/wasm"
     );
 
     const handLandmarker =
