@@ -818,6 +818,44 @@
                 translateY(-1px);
 
         }
+            
+                #reset-instrument {
+            border: none;
+            background: #8b5cf6;
+            color: white;
+            border-radius: 10px;
+            padding: 13px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition:
+                background 0.15s ease,
+                transform 0.1s ease;
+        }
+
+          #restore-instrument {
+            border: none;
+            background: #8b5cf6;
+            color: white;
+            border-radius: 10px;
+            padding: 13px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition:
+                background 0.15s ease,
+                transform 0.1s ease;
+        }
+
+        #reset-instrument:hover {
+            background: #9b7cf6;
+            transform: translateY(-1px);
+        }
+
+         #restore-instrument:hover {
+            background: #9b7cf6;
+            transform: translateY(-1px);
+        }
 
         #save-message {
 
@@ -1503,6 +1541,15 @@
                     >
                         💾 Guardar el meu instrument
                     </button>
+
+                    <button
+                        id="restore-instrument"
+                        type="button"
+                    >
+                        ♻️ Restaurar versió anterior
+                    </button>
+
+                    <span id="restore-message"></span>
 
                     <div id="save-message"></div>
 

@@ -3721,7 +3721,45 @@ let dreta = {
 };`;
 }
 
+function resetInstrumentConfiguration() {
+    muteAllNotes();
+    stopDrumLoop();
+    soundEnabled = false;
 
+    for (const hand of ["left", "right"]) {
+        stopHandVoices(hand);
+
+        instrumentConfig[hand] = {
+            mode: "hand",
+            hand: {
+                open: "none",
+                closed: "none"
+            },
+            fingers: {
+                thumb: "none",
+                index: "none",
+                middle: "none",
+                ring: "none",
+                pinky: "none"
+            }
+        };
+    }
+
+    handModes.left = "hand";
+    handModes.right = "hand";
+
+    selectedHandState.left = null;
+    selectedHandState.right = null;
+
+    activeHandStates.left = null;
+    activeHandStates.right = null;
+
+    selectedHand = null;
+    selectedFinger = null;
+    selectedAction = null;
+
+    updateCodePreview();
+}
 // ================================================
 // 💾 GUARDAR CONFIGURACIÓ
 // ================================================
@@ -3785,6 +3823,7 @@ const saveButton =
     );
 
 
+
 if (saveButton) {
 
     saveButton.addEventListener(
@@ -3793,7 +3832,120 @@ if (saveButton) {
     );
 }
 
+// ================================================
+// ♻️ BOTÓ RESTAURAR
+// ================================================
 
+const restoreButton =
+    document.getElementById(
+        "restore-instrument"
+    );
+
+
+if (restoreButton) {
+
+    restoreButton.addEventListener(
+        "click",
+        () => {
+
+            // Carreguem la configuració que es va guardar
+            loadSavedConfiguration();
+
+
+            // Actualitzem la interfície global
+            refreshGlobalMusicUI(
+                selectedScale,
+                selectedTempo
+            );
+
+
+            // Si hi havia una mà o dit seleccionat,
+            // actualitzem també la seva configuració visual
+            if (
+                selectedHand
+            ) {
+
+                if (
+                    handModes[selectedHand] ===
+                    "hand"
+                ) {
+
+                    loadCurrentHandConfiguration();
+
+                }
+                else if (
+                    selectedFinger
+                ) {
+
+                    loadCurrentConfiguration();
+                }
+            }
+
+
+            // Actualitzem la previsualització
+            updateCodePreview();
+
+
+            const message =
+                document.getElementById(
+                    "restore-message"
+                );
+
+
+            if (message) {
+
+                message.textContent =
+                    "♻️ Configuració restaurada!";
+
+
+                setTimeout(
+                    () => {
+
+                        message.textContent =
+                            "";
+
+                    },
+                    2500
+                );
+            }
+        }
+    );
+}
+// ================================================
+// 🧹 BOTÓ NETEJAR CONFIGURACIÓ
+// ================================================
+
+const resetButton = document.createElement("button");
+
+resetButton.type = "button";
+resetButton.id = "reset-instrument";
+resetButton.textContent = "🧹 Netejar configuració";
+
+resetButton.className = saveButton.className;
+
+saveButton.parentNode.appendChild(resetButton);
+
+resetButton.addEventListener(
+    "click",
+    () => {
+
+        resetInstrumentConfiguration();
+
+        localStorage.removeItem(
+            "ekhoWorkshopConfig"
+        );
+
+        closeHandConfigurationAreas();
+
+        refreshGlobalMusicUI(
+            selectedScale,
+            selectedTempo
+        );
+
+        updateCodePreview();
+
+    }
+);
 // ================================================
 // 📂 CARREGAR CONFIGURACIÓ GUARDADA
 // ================================================
@@ -3947,13 +4099,18 @@ function changeHandMode(
         "hand"
     ) {
 
-        updateSelectedTargetLabel(
-            hand,
-            selectedHandState[hand]
-        );
+        const selected =
+            document.getElementById(
+                "selected-finger"
+            );
 
 
-        loadCurrentHandConfiguration();
+        if (selected) {
+
+            selected.textContent =
+                `${hand === "left" ? "👈" : "👉"} Selecciona mà oberta o tancada`;
+
+        }
 
     }
     else {
@@ -4038,7 +4195,7 @@ function setupActionButtons() {
 // 🚀 PREPARAR TOTA LA INTERFÍCIE
 // ================================================
 
-loadSavedConfiguration();
+resetInstrumentConfiguration();
 
 
 setupGlobalMusicUI({
